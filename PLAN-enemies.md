@@ -107,3 +107,18 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 - **Health:** Medium (halved on each split)
 - **Collision damage:** Light
 - **Destruction:** When a worm that cannot split further is depleted, its two circles and line fly apart with the burning fragment animation
+
+---
+
+### Blaster
+- **Geometry:** Five triangular spikes at 72° intervals — a pentagram with only the outer points, no interior segments or fill; strobes between gray and white at ~2 Hz
+- **Movement:** Moves slowly and directly toward the player (pure chaser); speed increases with room difficulty
+- **Attack:** Once within ~5–6× the player ship length, fires a bright white jagged lightning bolt line directly at the nearest player
+  - Target player takes major damage (long scale pulse)
+  - Lightning bolt lingers briefly before fading
+  - Only damages the player at the endpoint — does not damage objects along its path
+  - Blaster immediately disintegrates after firing — one shot, then gone
+- **Threat:** Instantly recognizable due to strobing; slow approach gives reaction time but a wrangler tether or crowded room removes that option; multiple blasters with staggered timing force prioritization; pairs lethally with wranglers
+- **Health:** Medium — intended to be destroyed before it reaches firing range
+- **Collision damage:** Medium
+- **Destruction:** Five spike segments fly apart individually with burning fragment animation; lightning bolt line fades simultaneously
