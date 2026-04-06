@@ -93,6 +93,13 @@
 - Boss rooms contain a specialized spawner that produces the boss enemy
 - Room is not cleared until all machines AND all enemies are destroyed
 
+### Spawner Machine Visual Design
+- A box drawn with a heavy white line
+- Box contains a miniature portrait of the enemy type it spawns — immediately readable
+- White line shifts to red as the machine takes damage (consistent with global damage color language)
+- Subject to the same scale pulse hit feedback as enemies and players
+- On destruction: box segments and portrait components fly apart with the burning fragment animation
+
 ---
 
 ## Co-op System
@@ -175,9 +182,80 @@ Applies to: enemies, spawner machines
 
 ---
 
+## Enemy Architecture
+
+Enemies are composed of independent, combinable parts to keep the system extensible:
+
+- **Geometry** — separable components that fly apart on destruction
+- **Movement behavior** — how the enemy moves (composable, reusable)
+- **Attack behavior** — bullet patterns (composable, reusable)
+- **Health & difficulty scaling** — stats tuned per room difficulty
+- **Special traits** — optional flags (door blocker, boss, etc.)
+
+### Collision Rule
+- If an enemy or spawning machine collides with a player, both the colliding object and the player take damage
+- Collision damage and bullet damage values are tuned independently
+
+### Movement Behaviors (reusable)
+- **Chaser** — moves directly toward the player
+- **Orbiter** — circles the player at a fixed radius
+- **Patroller** — moves along a fixed path within the room
+- **Wanderer** — moves randomly, changes direction periodically
+- **Door blocker** — positions between the player and the nearest door
+- **Stationary** — doesn't move (turret-style)
+- **Retreater** — moves away from the player, keeping distance
+
+### Attack Behaviors (reusable)
+- **Aimed shot** — single bullet fired directly at the player
+- **Spread shot** — fan of bullets centered on player direction
+- **Ring shot** — bullets fired in all directions simultaneously
+- **Spiral** — rotating stream of bullets
+- **Burst** — rapid succession of aimed shots then a cooldown
+- **Predictive** — leads the player's position rather than aiming directly
+
+---
+
+## Enemy Types
+
+### Wanderer
+- **Geometry:** Simple square; gray
+- **Movement:** Random wandering, bounces/steers away from walls, rotates continuously in a random direction (can change periodically)
+- **Attack:** None — purely a collision hazard
+- **Threat:** Low individually; dangerous in large numbers by restricting maneuvering space
+- **Health:** Low
+- **Collision damage:** Light hit
+- **Destruction:** Four line segments fly apart individually, burning fragment animation
+- **Role:** Fodder; pairs well with stationary turrets
+
+### Dart
+- **Geometry:** Single chevron (six line segments), always oriented to face movement direction; cyan
+- **Movement:** Homes toward player like a guided missile with a turning radius — steers gradually, not instantly; speed and turning rate scale with room difficulty
+- **Attack:** None — purely a collision threat
+- **Threat:** Low early game, dangerous at high speed; multiple converging darts are hard to dodge simultaneously
+- **Health:** Low
+- **Collision damage:** Medium (pointed missile)
+- **Destruction:** Six line segments fly apart individually, burning fragment animation
+- **Scaling:** Speed is a direct tunable parameter tied to room difficulty
+
+### Wrangler
+- **Geometry:** Large central circle (pure green) with four smaller circles (yellow) at 90° intervals connected by short line segments; two-tone green/yellow
+- **Movement:** Wanders passively until player enters detection radius, then approaches player
+- **Attack:** Deploys a tether line (light yellow) that connects to the player once within ~6× the player ship length
+  - While tethered, player movement away from the wrangler is resisted — pulled toward the wrangler
+  - Player can still move but with reduced effectiveness against the pull direction
+  - Multiple wranglers can tether simultaneously, each applying an independent pull vector
+  - Tether only breaks when the wrangler is destroyed — no escape by outrunning it
+  - Tether line disappears instantly on wrangler death
+- **Threat:** High — forces immediate prioritization; multiple wranglers pulling in opposing directions severely restrict movement
+- **Health:** Medium
+- **Collision damage:** Medium
+- **Destruction:** Central circle, four satellite circles, connecting segments all fly apart individually; tether line snaps and vanishes; burning fragment animation
+
+---
+
 ## TBD — Still to Plan
 
-- Enemy types and behaviors
+- Additional enemy types
 - Weapon variety and upgrades
 - Pickup/upgrade categories
 - Boss designs
