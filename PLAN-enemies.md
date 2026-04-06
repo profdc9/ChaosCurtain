@@ -122,3 +122,24 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 - **Health:** Medium — intended to be destroyed before it reaches firing range
 - **Collision damage:** Medium
 - **Destruction:** Five spike segments fly apart individually with burning fragment animation; lightning bolt line fades simultaneously
+
+---
+
+## Boss Enemies
+
+Boss enemies differ from regular enemies in the following ways:
+- Spawned once on room entry by a dedicated boss spawner (which then sits idle)
+- Boss rooms may also contain regular spawners producing fodder enemies simultaneously
+- Room is not cleared until all spawners and all enemies (including the boss) are destroyed
+- Health is ~10× that of ordinary enemies (tunable per boss)
+- Each boss has unique movement patterns, geometry, and special traits
+
+### Boss — Bird
+- **Geometry:** Two wing pairs (each a V shape) joined at a center-bottom point — left wing V opens lower-left, right wing V opens lower-right; an upward-pointing V connects the tops of both wings forming the head; two small circles inside the upward V as eyes; all line segments yellow, eyes light blue
+- **Animation:** Wings fan inward and outward continuously — flapping motion; faster on dive, slower on retreat
+- **Movement:** Erratic flapping around the room; repeatedly dives swiftly toward the player then pulls back (charge-and-retreat); after colliding with the player, bounces back as if deflected — must reorient before charging again, giving the player a brief damage window
+- **Special trait — Collision immunity:** Bird does not take damage from colliding with the player; player does take damage; bird can only be damaged by player weapons — no attrition strategy possible
+- **Threat:** High mobility and unpredictable charge timing; collision immunity removes trading hits as a strategy; paired with fodder spawners forces split attention
+- **Health:** ~10× ordinary enemy baseline
+- **Collision damage dealt:** Heavy (to player only)
+- **Destruction:** All line segments and eye circles fly apart individually with burning fragment animation

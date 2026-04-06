@@ -44,9 +44,16 @@
 ## Spawner Machines
 
 - Persistent objects within a room that continuously spawn enemies until destroyed
-- Spawn enemies on a timer or wave pattern
-- Boss rooms contain a specialized spawner that produces the boss enemy
 - Room is not cleared until all machines AND all enemies are destroyed
+
+### Regular Spawners
+- Continuously spawn enemies on a timer or wave pattern until destroyed
+- Multiple may appear in a single room
+
+### Boss Spawners
+- Spawn exactly one boss enemy when the player enters the room, then sit idle
+- A room may contain both a boss spawner and regular spawners simultaneously — fodder enemies spawn continuously while the boss is active
+- The boss spawner must still be destroyed to clear the room
 
 ### Visual Design
 - A box drawn with a heavy white line
