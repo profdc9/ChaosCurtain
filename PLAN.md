@@ -16,5 +16,5 @@
 
 ## TBD — Still to Plan
 
-- Save system (seeds, high scores, etc.)
+- Save system — deferred; desktop (Tauri) saves to local disk via Tauri file system API; browser version requires persistent server or cloud storage (larger architectural decision to be made separately)
 - Implementation architecture
