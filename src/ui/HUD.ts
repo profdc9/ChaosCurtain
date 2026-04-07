@@ -2,7 +2,7 @@ import * as ex from 'excalibur';
 import { GAME, ROOM } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { GameEvents } from '../utils/GameEvents';
-import { StrokeFont } from './StrokeFont';
+import { StrokeFont, FONT_COARSENESS } from './StrokeFont';
 
 export class HUD extends ex.ScreenElement {
   private readonly state: SharedPlayerState;
@@ -63,12 +63,12 @@ export class HUD extends ex.ScreenElement {
 
     const fontSize = 22;
     const fleetText = `X ${this.state.fleet}`;
-    StrokeFont.draw(ctx, fleetText, iconX + 24, iconCY - fontSize / 2, fontSize);
+    StrokeFont.draw(ctx, fleetText, iconX + 24, iconCY - fontSize / 2, fontSize, '#ffffff', 1.5, FONT_COARSENESS);
 
     // --- Score (right side) ---
     const scoreText = `SCORE ${this.state.score}`;
     const scoreW = StrokeFont.measure(scoreText, fontSize);
-    StrokeFont.draw(ctx, scoreText, w - 20 - scoreW, iconCY - fontSize / 2, fontSize);
+    StrokeFont.draw(ctx, scoreText, w - 20 - scoreW, iconCY - fontSize / 2, fontSize, '#ffffff', 1.5, FONT_COARSENESS);
   }
 
   // Draws a miniature player ship centered at (cx, cy)

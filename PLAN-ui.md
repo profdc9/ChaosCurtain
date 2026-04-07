@@ -5,7 +5,11 @@
 - All UI elements drawn as vector line graphics — boxes, buttons, borders are stroked lines only
 - Fonts rendered as stroke-based vector characters (Asteroids/Tempest style) — each letter is a series of line segments
 - No bitmap fonts, no filled shapes — fully consistent with the game aesthetic
-- A custom stroke font will need to be implemented or a suitable vector font library found
+- **Implemented:** Hershey futural vector font via `StrokeFont` class (`src/ui/StrokeFont.ts`)
+  - Font data pre-extracted to a static JSON (`src/ui/hershey-futural.json`) — no runtime Node.js dependency
+  - `StrokeFont.draw(ctx, text, x, y, size, color, lineWidth, coarseness)` renders stroked text to any Canvas 2D context
+  - `StrokeFont.measure(text, size)` returns rendered width without drawing
+  - **Coarseness control** (`FONT_COARSENESS = 5`): accumulates segment lengths along each path; only commits a new line segment once the threshold is exceeded, producing angular/coarse letterforms authentic to low-resolution vector displays. Final point of each path is always included to close curves correctly.
 
 ---
 
