@@ -14,6 +14,7 @@
 
 - Vector graphics aesthetic — geometry drawn as lines, polygons, and circles
 - No bitmap sprites; all visuals are procedurally drawn primitives
+- **All shapes are outlines/strokes only — no filled shapes anywhere**; consistent with a vector display which draws lines directly
 - Antialiased lines via Excalibur's built-in `antialias` option (enabled by default)
 - No phosphor persistence effect (deferred for performance reasons)
 

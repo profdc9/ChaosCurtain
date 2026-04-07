@@ -143,3 +143,35 @@ Boss enemies differ from regular enemies in the following ways:
 - **Health:** ~10× ordinary enemy baseline
 - **Collision damage dealt:** Heavy (to player only)
 - **Destruction:** All line segments and eye circles fly apart individually with burning fragment animation
+
+---
+
+### Boss — Snake
+- **Geometry:** Chain of 15–20 tangent circles (segment count tunable, to be revised once relative sizes are established); head circle contains two small eye circles; entire snake green; each segment independently shifts toward red as its own health depletes — body can show a patchwork of health states
+- **Movement:** Classic snake body-follows-head motion; attempts to encircle the player, slowly tightening a loop to trap them; once a full loop is completed around the player, the head rams toward the player; bounces back on collision (like the Bird) giving the player a brief damage window
+- **Special trait — Segmented health:**
+  - Each segment has its own independent health pool
+  - Head has 2× the health of regular segments
+  - When a segment reaches zero health: that segment and all segments behind it (tail-ward) disintegrate, shortening the snake
+  - If the head is destroyed: entire snake disintegrates immediately
+  - Head cannot be damaged by ramming the player; player does take damage from the ram
+- **Speed scaling:** Snake speeds up as segments are lost; capped at 2× its initial speed — shorter snake trades reduced encircling reach for increased aggression
+- **Threat:** Encircling behavior restricts player movement over time; segmented health creates a strategic choice between targeting the head (risky, high payoff) or chipping the tail (safer, speeds up the snake)
+- **Health:** Head ~20× ordinary enemy baseline; regular segments ~10×
+- **Collision damage dealt:** Heavy (head only, to player only)
+- **Destruction:** Disintegrating segments each fly apart as individual circles with burning fragment animation; full snake destruction produces a cascade of fragments along the entire length
+
+---
+
+### Boss — Zapsphere
+- **Geometry:** Large circle (cyan outline, not filled) with a rotating square inside (gray outline, not filled); square continuously cycles gray → white → blue → gray; all shapes outlines only — vector display consistent
+- **Movement:** Drifts slowly around the room; actively tends toward clusters of other enemies, using them as cover and forcing the player to clear fodder before getting a clean shot
+- **Special mechanic — Danger zone:**
+  - Projectiles deal significantly more damage when fired from within ~7–8 sphere lengths
+  - If the player dwells within that range too long, a jagged white lightning bolt fires from the sphere directly at the player — severe damage
+  - Dwell time before lightning fires decreases with room difficulty (low difficulty: generous window; high difficulty: very short, requires precise dart-in/dart-out timing)
+  - Internal square animation accelerates and shifts as the dwell timer counts down — readable visual warning
+- **Threat:** Forces a risk/reward rhythm of closing in to deal full damage then retreating before the lightning fires; paired with other enemies the player must navigate the danger zone while dodging; a wrangler tether while in the danger zone is lethal; hides among fodder enemies to impede clean shots
+- **Health:** ~10× ordinary enemy baseline
+- **Collision damage dealt:** Medium
+- **Destruction:** Circle and square outlines fly apart individually with burning fragment animation
