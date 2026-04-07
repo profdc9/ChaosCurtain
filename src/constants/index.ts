@@ -12,7 +12,16 @@ export const ROOM = {
   INNER_RIGHT: 1264,
   INNER_TOP: 76,
   INNER_BOTTOM: 704,
-  WALL_COLOR: '#444444',
+  WALL_LINE_COLOR: '#ADD8E6',
+} as const;
+
+// Door configuration
+export const DOOR = {
+  WIDTH: 80,         // gap width in pixels
+  BAR_THICKNESS: 10, // short dimension of the hollow rectangle bar
+  OPEN_SPEED: 3.0,   // progress units/sec (1 = closed → 0 = open; fully opens in ~0.33s)
+  ENTRY_OFFSET: 50,  // px inside the room where the player appears after entering
+  CANVAS_SIZE: 80,   // canvas square used for bar drawing
 } as const;
 
 // Player configuration

@@ -47,14 +47,33 @@ export class HUD extends ex.ScreenElement {
     const barH = 18;
     const ratio = this.state.healthRatio;
 
+    // Outer border rectangle
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    const fillW = Math.max(0, (barW - 4) * ratio);
-    const fillColor = ratio > 0.5 ? '#00cc44' : ratio > 0.25 ? '#ccaa00' : '#cc2200';
-    ctx.fillStyle = fillColor;
-    ctx.fillRect(barX + 2, barY + 2, fillW, barH - 4);
+    // Zig-zag fill — fully saturated green, length proportional to health
+    const innerLeft = barX + 2;
+    const innerTop = barY + 2;
+    const innerBottom = barY + barH - 2;
+    const healthRight = innerLeft + Math.max(0, (barW - 4) * ratio);
+    const toothHalf = 6; // px per half-tooth (full V = 12 px wide)
+
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(innerLeft, innerBottom);
+
+    let x = innerLeft;
+    let toTop = true;
+    while (x < healthRight) {
+      const nextX = Math.min(x + toothHalf, healthRight);
+      ctx.lineTo(nextX, toTop ? innerTop : innerBottom);
+      x = nextX;
+      toTop = !toTop;
+    }
+    ctx.stroke();
 
     // --- Ship icon × fleet count ---
     const iconX = barX + barW + 20;

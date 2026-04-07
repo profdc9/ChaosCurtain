@@ -1,11 +1,13 @@
 import * as ex from 'excalibur';
-import { PLAYER, ROOM, WANDERER } from '../constants';
+import { PLAYER, WANDERER } from '../constants';
 import { InputSystem } from '../systems/InputSystem';
 import { BulletActor } from './BulletActor';
 import { WandererActor } from './enemies/WandererActor';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 
 export class PlayerActor extends ex.Actor {
+  readonly isPlayer = true; // duck-typed by DoorActor for collision detection
+
   private readonly input: InputSystem;
   private readonly sharedState: SharedPlayerState;
   private fireTimer = 0;
@@ -58,12 +60,6 @@ export class PlayerActor extends ex.Actor {
     } else {
       this.vel = ex.Vector.Zero;
     }
-
-    // Clamp to room bounds
-    this.pos = ex.vec(
-      Math.max(ROOM.INNER_LEFT + PLAYER.COLLIDER_RADIUS, Math.min(ROOM.INNER_RIGHT - PLAYER.COLLIDER_RADIUS, this.pos.x)),
-      Math.max(ROOM.INNER_TOP + PLAYER.COLLIDER_RADIUS, Math.min(ROOM.INNER_BOTTOM - PLAYER.COLLIDER_RADIUS, this.pos.y)),
-    );
 
     // Firing
     this.fireTimer += dt;

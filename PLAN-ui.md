@@ -71,7 +71,7 @@ Audio cues when enemies approach critical range:
 | Score | Current total score |
 | Multiplier | Current kill streak multiplier; hidden or shows 1× when inactive; flashes/pulses when active |
 | Room timer | Time elapsed since entering current room |
-| Health bar | Shared health pool |
+| Health bar | Shared health pool — white outline rectangle, zig-zag fill in saturated green (#00ff00) proportional to health; no solid fill (vector authentic) |
 | Fleet count | Lives remaining |
 | Shooter type | Upgrade level indicator |
 | Weapon power | Square-with-dot icon × level |

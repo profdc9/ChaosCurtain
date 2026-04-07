@@ -63,13 +63,13 @@
 - Gaps cut into the line where doors exist
 
 ### Doors
-- Drawn as a heavy white line segment (a long thin rectangle / bar) across the door gap
-- **Locked** (enemies still alive): bar is solid white, player cannot pass; touching it does nothing (or brief visual feedback)
-- **Unlocked** (room cleared): bar is solid white, player touching it triggers the open animation
-- **Opening animation**: bar shrinks along its long dimension (a horizontal bar on N/S walls shrinks width; a vertical bar on E/W walls shrinks height) until gone
+- Drawn as a **narrow hollow white rectangle** across the door gap (stroke only, no fill — vector display authentic)
+- **Locked** (enemies still alive): full-length rectangle, player cannot pass; touching it does nothing
+- **Unlocked** (room cleared): full-length rectangle, player touching it triggers the open animation
+- **Opening animation**: rectangle shrinks along its long dimension (horizontal on N/S walls, vertical on E/W walls) until it disappears
 - **Transition fires** when the bar is fully gone — player is placed at the opposite door in the new room
-- **Entry door** in the new room starts closed and immediately plays the close animation in reverse (expands into place) to show the door sealing behind the player
-- Cleared rooms: doors stay open (no bar) and player can pass freely in both directions
+- **Entry door** in the new room starts open and immediately plays the close animation (expands into place) to show the door sealing behind the player
+- Cleared rooms: doors stay open (no rectangle) and player can pass freely in both directions
 
 ### Door Trigger
 - Player must physically touch (collide with) the door bar to initiate opening
