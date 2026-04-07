@@ -175,3 +175,22 @@ Boss enemies differ from regular enemies in the following ways:
 - **Health:** ~10× ordinary enemy baseline
 - **Collision damage dealt:** Medium
 - **Destruction:** Circle and square outlines fly apart individually with burning fragment animation
+
+---
+
+### Boss — GlitchBoss *(most difficult; placed closest to exit)*
+- **Geometry:** Square box (outline only) containing an arrow that can point in any direction; arrow color cycles randomly between green, blue, gray, and white (never red — reserved for damage indication); all outlines only
+- **Animation:** Arrow rotates at a constant slow speed with random direction changes — player cannot predict or time a fixed spin cycle
+- **Movement:** Retreats to maintain distance from the player; moves slower than the player's maximum speed so the gap can be closed, but the glitch mechanic complicates doing so
+- **Special mechanic — Glitch cone:**
+  - Projects an invisible cone centered on itself, aligned with the arrow direction
+  - If the player is within the cone, they are glitched — any movement that would decrease distance to the GlitchBoss is blocked; lateral and retreating movement remain free
+  - Cone angle widens as the player gets closer — at long range narrow and easy to step out of; at close range nearly any approach direction is blocked
+  - Player escapes the glitch by moving away until the arrow rotates to point elsewhere
+  - Cone is invisible — its geometry is learned through experience, adding a layer of skill expression
+  - **Glitch feedback:** When actively glitching a player, the arrow pulses brightly — confirms the glitch state without revealing cone geometry
+- **Damage scaling:** Damage dealt to the GlitchBoss scales with proximity — closer shots deal significantly more damage; rewards precise, aggressive play during approach windows
+- **Threat:** Hardest boss in the game; retreating movement plus widening invisible cone makes sustained close-range combat nearly impossible; player must read arrow direction, wait for a window, dash in to fire, retreat before the cone catches them; other room enemies create pressure during waiting phases; wrangler tether while glitched is near-lethal; one per room
+- **Health:** ~10× ordinary enemy baseline
+- **Collision damage dealt:** Medium
+- **Destruction:** Box and arrow fly apart individually with burning fragment animation
