@@ -1,8 +1,7 @@
 import * as ex from 'excalibur';
-import { PLAYER, WANDERER } from '../constants';
+import { PLAYER } from '../constants';
 import { InputSystem } from '../systems/InputSystem';
 import { BulletActor } from './BulletActor';
-import { WandererActor } from './enemies/WandererActor';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 
 export class PlayerActor extends ex.Actor {
@@ -41,10 +40,14 @@ export class PlayerActor extends ex.Actor {
 
   onInitialize(_engine: ex.Engine): void {
     this.on('collisionstart', (evt) => {
-      const other = evt.other;
-      if (other instanceof WandererActor) {
-        this.sharedState.takeDamage(WANDERER.COLLISION_DAMAGE);
-        other.takeDamage(PLAYER.COLLISION_DAMAGE_TO_ENEMY);
+      const other = evt.other as ex.Actor & {
+        isEnemy?: boolean;
+        collisionDamage?: number;
+        takeDamage?: (n: number) => void;
+      };
+      if (other.isEnemy) {
+        this.sharedState.takeDamage(other.collisionDamage ?? 0);
+        other.takeDamage?.(PLAYER.COLLISION_DAMAGE_TO_ENEMY);
       }
     });
   }

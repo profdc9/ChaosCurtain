@@ -6,7 +6,7 @@ export interface DoorDef {
 }
 
 export interface EnemySpawnDef {
-  type: 'wanderer';
+  type: 'wanderer' | 'dart';
   count: number;
 }
 

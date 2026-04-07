@@ -22,16 +22,16 @@ export const MAZE: Record<string, RoomDef> = {
       { side: 'east', targetRoomId: 'roomC' },
       { side: 'south', targetRoomId: 'roomD' },
     ],
-    enemies: [{ type: 'wanderer', count: 5 }],
+    enemies: [{ type: 'wanderer', count: 3 }, { type: 'dart', count: 2 }],
   },
   roomC: {
     id: 'roomC',
     doors: [{ side: 'west', targetRoomId: 'roomB' }],
-    enemies: [{ type: 'wanderer', count: 7 }],
+    enemies: [{ type: 'wanderer', count: 3 }, { type: 'dart', count: 4 }],
   },
   roomD: {
     id: 'roomD',
     doors: [{ side: 'north', targetRoomId: 'roomB' }],
-    enemies: [{ type: 'wanderer', count: 4 }],
+    enemies: [{ type: 'wanderer', count: 2 }, { type: 'dart', count: 3 }],
   },
 };

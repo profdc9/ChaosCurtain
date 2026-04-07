@@ -71,6 +71,25 @@ export const WANDERER = {
   FRAGMENT_LIFETIME_MAX: 1.2,
 } as const;
 
+// Dart enemy configuration
+export const DART = {
+  SPEED: 160,
+  TURN_RATE: 2.5,         // radians per second (gradual homing, not instant)
+  HEALTH: 30,
+  COLLISION_DAMAGE: 25,
+  HALF_LENGTH: 16,        // nose to trailing-edge half-length
+  HALF_WIDTH: 10,         // half-wingspan
+  COLOR: '#00ffff',       // cyan
+  CANVAS_SIZE: 64,
+  COLLIDER_RADIUS: 10,
+  POINT_VALUE: 150,
+  FRAGMENT_SPEED_MIN: 60,
+  FRAGMENT_SPEED_MAX: 150,
+  FRAGMENT_ANGULAR_VEL_MAX: 5.0,
+  FRAGMENT_LIFETIME_MIN: 0.4,
+  FRAGMENT_LIFETIME_MAX: 1.0,
+} as const;
+
 // Damage and hit feedback
 export const DAMAGE = {
   LIGHT_HIT_THRESHOLD: 15,

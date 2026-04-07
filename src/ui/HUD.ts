@@ -57,7 +57,7 @@ export class HUD extends ex.ScreenElement {
     const innerTop = barY + 2;
     const innerBottom = barY + barH - 2;
     const healthRight = innerLeft + Math.max(0, (barW - 4) * ratio);
-    const toothHalf = 6; // px per half-tooth (full V = 12 px wide)
+    const toothHalf = 3; // px per half-tooth (full V = 6 px wide)
 
     ctx.strokeStyle = '#00ff00';
     ctx.lineWidth = 1.5;

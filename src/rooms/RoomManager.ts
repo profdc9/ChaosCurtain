@@ -4,6 +4,7 @@ import type { RoomDef, DoorDef, DoorSide } from './RoomDef';
 import { MAZE } from './MazeGraph';
 import { DoorActor } from '../actors/DoorActor';
 import { WandererActor } from '../actors/enemies/WandererActor';
+import { DartActor } from '../actors/enemies/DartActor';
 import { GameEvents } from '../utils/GameEvents';
 
 const OPPOSITE: Record<DoorSide, DoorSide> = {
@@ -273,6 +274,8 @@ export class RoomManager {
         const y = yMin + Math.random() * (yMax - yMin);
         if (spawnDef.type === 'wanderer') {
           this.add(new WandererActor(x, y));
+        } else if (spawnDef.type === 'dart') {
+          this.add(new DartActor(x, y, this.player));
         }
       }
     }

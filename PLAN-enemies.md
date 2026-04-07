@@ -39,7 +39,7 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 
 ## Enemy Types
 
-### Wanderer
+### Wanderer ✓ implemented
 - **Geometry:** Simple square; gray
 - **Movement:** Random wandering, bounces/steers away from walls; rotates continuously in a random direction (can change periodically)
 - **Attack:** None — purely a collision hazard
@@ -51,15 +51,20 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 
 ---
 
-### Dart
+### Dart ✓ implemented
 - **Geometry:** Single chevron (six line segments), always oriented to face movement direction; cyan
 - **Movement:** Homes toward player like a guided missile with a turning radius — steers gradually, not instantly; speed and turning rate scale with room difficulty
 - **Attack:** None — purely a collision threat
 - **Threat:** Low early game, dangerous at high speed; multiple converging darts are hard to dodge simultaneously
-- **Health:** Low
-- **Collision damage:** Medium (pointed missile)
+- **Health:** Low (30 HP)
+- **Collision damage:** Medium (25)
 - **Destruction:** Six line segments fly apart individually, burning fragment animation
-- **Scaling:** Speed and turning rate are direct tunable parameters tied to room difficulty
+- **Scaling:** `DART.SPEED` and `DART.TURN_RATE` are direct tunable constants
+- **Implementation notes:**
+  - Six segments defined as local-space coordinate pairs; rotated to world space for both drawing and fragment spawning
+  - Steering: each frame computes angle diff to player, clamps to `TURN_RATE * dt`, updates rotation and velocity
+  - Color shifts cyan → red as health drops (same pattern as Wanderer)
+  - Uses duck-typed `isEnemy = true` / `collisionDamage` pattern; PlayerActor no longer needs per-enemy `instanceof` checks
 
 ---
 
