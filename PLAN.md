@@ -9,15 +9,12 @@
 | [PLAN-combat.md](PLAN-combat.md) | Co-op system, player ship, spawner machines, collision rules |
 | [PLAN-visuals.md](PLAN-visuals.md) | Hit feedback, damage color shift, destruction animation |
 | [PLAN-enemies.md](PLAN-enemies.md) | Enemy architecture, movement/attack behaviors, all enemy types |
+| [PLAN-weapons.md](PLAN-weapons.md) | Primary weapon, upgrades, shield, panic button, damage resolution, balance notes |
 
 ---
 
 ## TBD — Still to Plan
 
-- Additional enemy types
-- Weapon variety and upgrades
-- Pickup/upgrade categories
-- Boss designs
 - Audio
 - Menus and UI
 - Save system (seeds, high scores, etc.)
