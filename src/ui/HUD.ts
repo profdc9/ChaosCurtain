@@ -2,6 +2,7 @@ import * as ex from 'excalibur';
 import { GAME, ROOM } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { GameEvents } from '../utils/GameEvents';
+import { StrokeFont } from './StrokeFont';
 
 export class HUD extends ex.ScreenElement {
   private readonly state: SharedPlayerState;
@@ -31,7 +32,7 @@ export class HUD extends ex.ScreenElement {
 
     ctx.clearRect(0, 0, w, h);
 
-    // HUD background separator line
+    // HUD bottom separator line
     ctx.strokeStyle = '#444444';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -39,32 +40,66 @@ export class HUD extends ex.ScreenElement {
     ctx.lineTo(w, h - 1);
     ctx.stroke();
 
-    // Health bar
+    // --- Health bar (left side) ---
     const barX = 20;
-    const barY = 18;
-    const barW = 200;
-    const barH = 20;
+    const barY = 20;
+    const barW = 180;
+    const barH = 18;
     const ratio = this.state.healthRatio;
 
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    // Fill proportional to health
-    const fillW = Math.max(0, (barW - 2) * ratio);
+    const fillW = Math.max(0, (barW - 4) * ratio);
     const fillColor = ratio > 0.5 ? '#00cc44' : ratio > 0.25 ? '#ccaa00' : '#cc2200';
     ctx.fillStyle = fillColor;
-    ctx.fillRect(barX + 1, barY + 1, fillW, barH - 2);
+    ctx.fillRect(barX + 2, barY + 2, fillW, barH - 4);
 
-    // Health label
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '14px monospace';
-    ctx.fillText(`HEALTH  ${this.state.fleet} SHIPS`, barX + barW + 16, barY + 14);
+    // --- Ship icon × fleet count ---
+    const iconX = barX + barW + 20;
+    const iconCY = h / 2;
+    this.drawShipIcon(ctx, iconX, iconCY, '#ADD8E6');
 
-    // Score
-    ctx.font = '20px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(`SCORE  ${this.state.score}`, w - 20, barY + 16);
-    ctx.textAlign = 'left';
+    const fontSize = 22;
+    const fleetText = `X ${this.state.fleet}`;
+    StrokeFont.draw(ctx, fleetText, iconX + 24, iconCY - fontSize / 2, fontSize);
+
+    // --- Score (right side) ---
+    const scoreText = `SCORE ${this.state.score}`;
+    const scoreW = StrokeFont.measure(scoreText, fontSize);
+    StrokeFont.draw(ctx, scoreText, w - 20 - scoreW, iconCY - fontSize / 2, fontSize);
+  }
+
+  // Draws a miniature player ship centered at (cx, cy)
+  private drawShipIcon(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string): void {
+    const len = 18;
+    const hw = 7;
+    const nr = 2.5;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+
+    // Triangle body
+    ctx.beginPath();
+    ctx.moveTo(len / 2, 0);
+    ctx.lineTo(-len / 2, -hw);
+    ctx.lineTo(-len / 2, hw);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Nacelle circles
+    ctx.beginPath();
+    ctx.arc(-len / 2, -hw, nr, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(-len / 2, hw, nr, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
   }
 }
