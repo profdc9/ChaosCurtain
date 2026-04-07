@@ -10,11 +10,11 @@
 | [PLAN-visuals.md](PLAN-visuals.md) | Hit feedback, damage color shift, destruction animation |
 | [PLAN-enemies.md](PLAN-enemies.md) | Enemy architecture, movement/attack behaviors, all enemy types |
 | [PLAN-weapons.md](PLAN-weapons.md) | Primary weapon, upgrades, shield, panic button, damage resolution, balance notes |
+| [PLAN-ui.md](PLAN-ui.md) | Audio, menus, HUD, pause, game over/victory screens, scoring system |
 
 ---
 
 ## TBD — Still to Plan
 
-- Audio
-- Menus and UI
 - Save system (seeds, high scores, etc.)
+- Implementation architecture
