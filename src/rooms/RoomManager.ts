@@ -45,10 +45,15 @@ export class RoomManager {
   private roomActors: ex.Actor[] = [];
   private doors: DoorActor[] = [];
   /** Spawner machines + all live enemies they have produced. Room clears at 0. */
-  private liveCount = 0;
+  private _liveCount = 0;
+  private _currentRoomId = '';
+  private _currentDifficulty = 0;
   private diedHandler: (() => void) | null = null;
-  private currentRoomId = '';
   private readonly clearedRooms = new Set<string>();
+
+  get liveCount(): number { return this._liveCount; }
+  get currentRoomId(): string { return this._currentRoomId; }
+  get currentDifficulty(): number { return this._currentDifficulty; }
 
   constructor(scene: ex.Scene, player: ex.Actor) {
     this.scene = scene;
@@ -67,7 +72,7 @@ export class RoomManager {
     }
     this.roomActors = [];
     this.doors = [];
-    this.liveCount = 0;
+    this._liveCount = 0;
 
     if (this.diedHandler) {
       GameEvents.off('enemy:died', this.diedHandler);
@@ -75,14 +80,15 @@ export class RoomManager {
     }
 
     // Build new room.
-    this.currentRoomId = roomDef.id;
+    this._currentRoomId = roomDef.id;
+    this._currentDifficulty = roomDef.difficulty;
     this.buildWalls(roomDef);
     this.buildDoors(roomDef, entranceSide);
 
     const alreadyCleared = this.clearedRooms.has(roomDef.id);
 
     if (!alreadyCleared) {
-      this.spawnMachines(roomDef); // increments liveCount for each machine placed
+      this.spawnMachines(roomDef); // increments _liveCount for each machine placed
     }
 
     // Position player.
@@ -91,12 +97,12 @@ export class RoomManager {
       this.player.vel = ex.Vector.Zero;
     }
 
-    if (this.liveCount === 0) {
+    if (this._liveCount === 0) {
       this.unlockDoors();
     } else {
       this.diedHandler = () => {
-        this.liveCount = Math.max(0, this.liveCount - 1);
-        if (this.liveCount === 0) this.unlockDoors();
+        this._liveCount = Math.max(0, this._liveCount - 1);
+        if (this._liveCount === 0) this.unlockDoors();
       };
       GameEvents.on('enemy:died', this.diedHandler);
     }
@@ -261,7 +267,7 @@ export class RoomManager {
   }
 
   private unlockDoors(): void {
-    this.clearedRooms.add(this.currentRoomId);
+    this.clearedRooms.add(this._currentRoomId);
     for (const door of this.doors) {
       door.unlock();
     }
@@ -288,11 +294,11 @@ export class RoomManager {
           interval,
           this.player,
           (actor) => {
-            this.liveCount++;
+            this._liveCount++;
             this.add(actor);
           },
         );
-        this.liveCount++;
+        this._liveCount++;
         this.add(spawner);
       }
     }

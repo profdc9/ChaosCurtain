@@ -6,9 +6,10 @@ import { GameEvents } from '../../utils/GameEvents';
 
 export class WandererActor extends ex.Actor {
   readonly isEnemy = true;
+  readonly enemyName = 'Wanderer';
   readonly collisionDamage = WANDERER.COLLISION_DAMAGE;
 
-  private readonly healthComp: HealthComponent;
+  readonly healthComp: HealthComponent;
   private currentColor: string = WANDERER.COLOR;
   private directionTimer = 0;
   private directionInterval: number;

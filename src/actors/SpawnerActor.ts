@@ -9,9 +9,10 @@ import type { SpawnEnemyType } from '../rooms/RoomDef';
 
 export class SpawnerActor extends ex.Actor {
   readonly isEnemy = true;
+  readonly enemyName = 'Spawner';
   readonly collisionDamage = SPAWNER.COLLISION_DAMAGE;
 
-  private readonly healthComp: HealthComponent;
+  readonly healthComp: HealthComponent;
   private readonly enemyType: SpawnEnemyType;
   private readonly player: ex.Actor;
   private readonly registerEnemy: (actor: ex.Actor) => void;

@@ -19,9 +19,10 @@ const SEGMENTS: Array<[number, number, number, number]> = [
 
 export class DartActor extends ex.Actor {
   readonly isEnemy = true;
+  readonly enemyName = 'Dart';
   readonly collisionDamage = DART.COLLISION_DAMAGE;
 
-  private readonly healthComp: HealthComponent;
+  readonly healthComp: HealthComponent;
   private readonly playerRef: ex.Actor;
   private currentColor: string = DART.COLOR;
   private readonly dartCanvas: ex.Canvas;

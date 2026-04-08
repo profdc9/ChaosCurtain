@@ -18,6 +18,9 @@ export class HealthComponent extends ex.Component {
     return this.current / this.max;
   }
 
+  get currentHp(): number { return this.current; }
+  get maxHp(): number { return this.max; }
+
   takeDamage(amount: number): void {
     if (this.dead) return;
     this.current = Math.max(0, this.current - amount);

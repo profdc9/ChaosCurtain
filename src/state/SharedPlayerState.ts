@@ -8,6 +8,9 @@ export class SharedPlayerState {
   fleet: number;
   score: number;
 
+  /** When true, applyDamage is a no-op. Set from DebugConfig in GameplayScene. */
+  godMode = false;
+
   // Upgrade levels
   shooterType: 1 | 2 | 3 = 1;
   weaponPower: number = 1;
@@ -45,6 +48,7 @@ export class SharedPlayerState {
    * raw → shield absorption → health pool → upgrade loss threshold check
    */
   applyDamage(raw: number): void {
+    if (this.godMode) return;
     let postShield = raw;
 
     if (this.shieldLevel > 0) {
