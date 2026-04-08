@@ -5,15 +5,17 @@ export interface DoorDef {
   targetRoomId: string;
 }
 
-export interface EnemySpawnDef {
-  type: 'wanderer' | 'dart';
+export type SpawnEnemyType = 'wanderer' | 'dart';
+
+export interface SpawnerDef {
+  type: SpawnEnemyType;
   count: number;
 }
 
 export interface RoomDef {
   id: string;
   doors: DoorDef[];
-  enemies: EnemySpawnDef[];
+  spawners: SpawnerDef[];
   /** 0.0 = easy (far from exit), 1.0 = hardest (at exit). */
   difficulty: number;
   isExit: boolean;

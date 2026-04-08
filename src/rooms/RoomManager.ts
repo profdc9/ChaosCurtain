@@ -1,10 +1,9 @@
 import * as ex from 'excalibur';
-import { GAME, ROOM, DOOR, WANDERER } from '../constants';
+import { GAME, ROOM, DOOR, SPAWNER } from '../constants';
 import type { RoomDef, DoorDef, DoorSide } from './RoomDef';
 import { MAZE } from './MazeGraph';
 import { DoorActor } from '../actors/DoorActor';
-import { WandererActor } from '../actors/enemies/WandererActor';
-import { DartActor } from '../actors/enemies/DartActor';
+import { SpawnerActor } from '../actors/SpawnerActor';
 import { GameEvents } from '../utils/GameEvents';
 
 const OPPOSITE: Record<DoorSide, DoorSide> = {
@@ -45,7 +44,8 @@ export class RoomManager {
   private readonly player: ex.Actor;
   private roomActors: ex.Actor[] = [];
   private doors: DoorActor[] = [];
-  private enemyCount = 0;
+  /** Spawner machines + all live enemies they have produced. Room clears at 0. */
+  private liveCount = 0;
   private diedHandler: (() => void) | null = null;
   private currentRoomId = '';
   private readonly clearedRooms = new Set<string>();
@@ -57,9 +57,8 @@ export class RoomManager {
 
   /**
    * Tear down the current room and build a new one.
-   * @param roomDef     Definition of the room to load.
-   * @param entranceSide  The side of the new room the player enters through,
-   *                      or null for the starting room (player placed at centre).
+   * @param roomDef      Definition of the room to load.
+   * @param entranceSide The side the player enters through, or null for the start room.
    */
   load(roomDef: RoomDef, entranceSide: DoorSide | null): void {
     // Remove all current room actors.
@@ -68,6 +67,7 @@ export class RoomManager {
     }
     this.roomActors = [];
     this.doors = [];
+    this.liveCount = 0;
 
     if (this.diedHandler) {
       GameEvents.off('enemy:died', this.diedHandler);
@@ -82,7 +82,7 @@ export class RoomManager {
     const alreadyCleared = this.clearedRooms.has(roomDef.id);
 
     if (!alreadyCleared) {
-      this.spawnEnemies(roomDef);
+      this.spawnMachines(roomDef); // increments liveCount for each machine placed
     }
 
     // Position player.
@@ -91,15 +91,12 @@ export class RoomManager {
       this.player.vel = ex.Vector.Zero;
     }
 
-    // Watch for enemy deaths to check room clear.
-    this.enemyCount = alreadyCleared ? 0 : roomDef.enemies.reduce((sum, e) => sum + e.count, 0);
-
-    if (this.enemyCount === 0) {
+    if (this.liveCount === 0) {
       this.unlockDoors();
     } else {
       this.diedHandler = () => {
-        this.enemyCount = Math.max(0, this.enemyCount - 1);
-        if (this.enemyCount === 0) this.unlockDoors();
+        this.liveCount = Math.max(0, this.liveCount - 1);
+        if (this.liveCount === 0) this.unlockDoors();
       };
       GameEvents.on('enemy:died', this.diedHandler);
     }
@@ -107,7 +104,7 @@ export class RoomManager {
 
   // ── Private helpers ─────────────────────────────────────────────────────────
 
-  /** Register an actor as owned by this room (added to scene + tracked). */
+  /** Register an actor as owned by this room (added to scene + tracked for cleanup). */
   private add(actor: ex.Actor): void {
     this.scene.add(actor);
     this.roomActors.push(actor);
@@ -249,7 +246,7 @@ export class RoomManager {
         doorDef.side,
         doorPos(doorDef.side),
         isEntrance,   // startOpen: entry door animates closed; exits start closed
-        !isEntrance,  // locked: exits locked until room cleared; entry always open
+        !isEntrance,  // locked: exits locked until room cleared; entry always unlocked
         () => this.onDoorOpened(doorDef),
       );
       this.doors.push(door);
@@ -270,22 +267,33 @@ export class RoomManager {
     }
   }
 
-  private spawnEnemies(roomDef: RoomDef): void {
-    const margin = WANDERER.COLLIDER_RADIUS + 20;
+  private spawnMachines(roomDef: RoomDef): void {
+    const margin = SPAWNER.HALF_SIZE + 20;
     const xMin = ROOM.INNER_LEFT + margin;
     const xMax = ROOM.INNER_RIGHT - margin;
     const yMin = ROOM.INNER_TOP + margin;
     const yMax = ROOM.INNER_BOTTOM - margin;
 
-    for (const spawnDef of roomDef.enemies) {
+    const interval =
+      SPAWNER.SPAWN_INTERVAL_SLOW +
+      (SPAWNER.SPAWN_INTERVAL_FAST - SPAWNER.SPAWN_INTERVAL_SLOW) * roomDef.difficulty;
+
+    for (const spawnDef of roomDef.spawners) {
       for (let i = 0; i < spawnDef.count; i++) {
         const x = xMin + Math.random() * (xMax - xMin);
         const y = yMin + Math.random() * (yMax - yMin);
-        if (spawnDef.type === 'wanderer') {
-          this.add(new WandererActor(x, y));
-        } else if (spawnDef.type === 'dart') {
-          this.add(new DartActor(x, y, this.player));
-        }
+        const spawner = new SpawnerActor(
+          x, y,
+          spawnDef.type,
+          interval,
+          this.player,
+          (actor) => {
+            this.liveCount++;
+            this.add(actor);
+          },
+        );
+        this.liveCount++;
+        this.add(spawner);
       }
     }
   }

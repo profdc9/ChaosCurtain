@@ -90,6 +90,12 @@ export const DART = {
   FRAGMENT_LIFETIME_MAX: 1.0,
 } as const;
 
+// Input configuration
+export const INPUT = {
+  GAMEPAD_DEADZONE: 0.15,       // radial deadzone applied to both sticks
+  GAMEPAD_FIRE_THRESHOLD: 0.25, // right-stick magnitude required to fire
+} as const;
+
 // Maze generation configuration
 export const MAZE_GEN = {
   GRID_W: 5,
@@ -98,6 +104,24 @@ export const MAZE_GEN = {
   EASY_TIER: 0.33,  // difficulty < this → wanderers only
   MED_TIER:  0.66,  // difficulty < this → wanderers + light darts
                     // difficulty >= MED_TIER → wanderers + heavy darts
+} as const;
+
+// Spawner machine configuration
+export const SPAWNER = {
+  SIZE: 40,
+  HALF_SIZE: 20,
+  HEALTH: 80,
+  COLLISION_DAMAGE: 10,
+  POINT_VALUE: 200,
+  SPAWN_INTERVAL_SLOW: 6.0,   // seconds per enemy at difficulty 0
+  SPAWN_INTERVAL_FAST: 1.5,   // seconds per enemy at difficulty 1
+  INITIAL_DELAY_FACTOR: 0.5,  // first spawn fires at interval × this
+  CANVAS_SIZE: 64,
+  FRAGMENT_SPEED_MIN: 60,
+  FRAGMENT_SPEED_MAX: 160,
+  FRAGMENT_ANGULAR_VEL_MAX: 3.0,
+  FRAGMENT_LIFETIME_MIN: 0.6,
+  FRAGMENT_LIFETIME_MAX: 1.4,
 } as const;
 
 // Damage and hit feedback

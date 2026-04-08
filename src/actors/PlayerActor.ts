@@ -57,16 +57,23 @@ export class PlayerActor extends ex.Actor {
     const state = this.input.getState(this.pos);
 
     // Movement
-    if (Math.sqrt(state.move.x * state.move.x + state.move.y * state.move.y) > 0) {
+    if (state.move.size > 0) {
       this.vel = state.move.scale(PLAYER.SPEED);
-      this.rotation = Math.atan2(state.move.y, state.move.x);
     } else {
       this.vel = ex.Vector.Zero;
     }
 
+    // Rotation: face aim direction when non-zero (works for both control schemes),
+    // fall back to movement direction so the ship points forward when not aiming.
+    if (state.aim.size > 0) {
+      this.rotation = Math.atan2(state.aim.y, state.aim.x);
+    } else if (state.move.size > 0) {
+      this.rotation = Math.atan2(state.move.y, state.move.x);
+    }
+
     // Firing
     this.fireTimer += dt;
-    if (state.isFiring && Math.sqrt(state.aim.x * state.aim.x + state.aim.y * state.aim.y) > 0 && this.fireTimer >= PLAYER.FIRE_RATE) {
+    if (state.isFiring && state.aim.size > 0 && this.fireTimer >= PLAYER.FIRE_RATE) {
       this.fireTimer = 0;
       const bullet = new BulletActor(this.pos.clone(), state.aim);
       engine.currentScene.add(bullet);

@@ -1,5 +1,5 @@
 import { SeededRandom } from '../utils/SeededRandom';
-import type { RoomDef, EnemySpawnDef, DoorSide } from '../rooms/RoomDef';
+import type { RoomDef, SpawnerDef, DoorSide } from '../rooms/RoomDef';
 import { MAZE_GEN } from '../constants';
 
 export interface MazeResult {
@@ -47,21 +47,21 @@ function bfsDistances(
 }
 
 /**
- * Generate enemy spawns for a room based on its difficulty (0 = easy, 1 = hardest).
- * Easy rooms get wanderers only; harder rooms mix in darts.
+ * Build spawner machine definitions for a room based on difficulty (0 = easy, 1 = hardest).
+ * Easy rooms get only wanderer machines; harder rooms mix in dart machines.
  */
-function buildEnemies(difficulty: number, rng: SeededRandom): EnemySpawnDef[] {
+function buildSpawners(difficulty: number, rng: SeededRandom): SpawnerDef[] {
   const { EASY_TIER, MED_TIER } = MAZE_GEN;
-  const result: EnemySpawnDef[] = [];
+  const result: SpawnerDef[] = [];
 
   if (difficulty < EASY_TIER) {
-    result.push({ type: 'wanderer', count: rng.nextInt(2, 3) });
-  } else if (difficulty < MED_TIER) {
-    result.push({ type: 'wanderer', count: rng.nextInt(2, 3) });
-    result.push({ type: 'dart',     count: rng.nextInt(1, 2) });
-  } else {
     result.push({ type: 'wanderer', count: rng.nextInt(1, 2) });
-    result.push({ type: 'dart',     count: rng.nextInt(2, 4) });
+  } else if (difficulty < MED_TIER) {
+    result.push({ type: 'wanderer', count: rng.nextInt(1, 2) });
+    result.push({ type: 'dart',     count: 1 });
+  } else {
+    result.push({ type: 'wanderer', count: 1 });
+    result.push({ type: 'dart',     count: rng.nextInt(1, 2) });
   }
 
   return result;
@@ -160,7 +160,7 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
       rooms[id] = {
         id,
         doors,
-        enemies: isExit ? [] : buildEnemies(difficulty, rng),
+        spawners: isExit ? [] : buildSpawners(difficulty, rng),
         difficulty,
         isExit,
       };

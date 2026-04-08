@@ -41,26 +41,29 @@
 
 ---
 
-## Spawner Machines
+## Spawner Machines ✓ implemented
 
 - Persistent objects within a room that continuously spawn enemies until destroyed
-- Room is not cleared until all machines AND all enemies are destroyed
+- Room is not cleared until all machines AND all active enemies are destroyed
+- `RoomManager.liveCount` = spawner count + live enemy count; room clears at 0
+- Enemies are no longer pre-placed in rooms; all enemies emerge from machines
 
-### Regular Spawners
-- Continuously spawn enemies on a timer or wave pattern until destroyed
-- Multiple may appear in a single room
+### Regular Spawners ✓ implemented
+- Spawn one enemy every N seconds (N = `lerp(SPAWN_INTERVAL_SLOW=6s, SPAWN_INTERVAL_FAST=1.5s, difficulty)`)
+- First spawn fires at `interval × INITIAL_DELAY_FACTOR` (0.5) so rooms feel active immediately
+- Multiple may appear in a single room; count and enemy type distribution scale with difficulty
 
 ### Boss Spawners
 - Spawn exactly one boss enemy when the player enters the room, then sit idle
-- A room may contain both a boss spawner and regular spawners simultaneously — fodder enemies spawn continuously while the boss is active
-- The boss spawner must still be destroyed to clear the room
+- A room may contain both a boss spawner and regular spawners simultaneously — deferred (bosses not yet implemented)
 
-### Visual Design
-- A box drawn with a heavy white line
-- Box contains a miniature portrait of the enemy type it spawns — immediately readable
-- White line shifts to red as the machine takes damage (consistent with global damage color language)
-- Subject to the same scale pulse hit feedback as enemies and players
-- On destruction: box segments and portrait components fly apart with the burning fragment animation
+### Visual Design ✓ implemented
+- Box (40×40) drawn with a heavy line: white when at full health, shifts to red as damaged
+- Box contains a miniature portrait of the enemy type it spawns:
+  - Wanderer spawner: small gray square
+  - Dart spawner: small cyan chevron
+- Subject to the same scale pulse hit feedback as enemies
+- On destruction: 4 box-side segments fly apart with the burning fragment animation; emits `enemy:died`
 
 ---
 

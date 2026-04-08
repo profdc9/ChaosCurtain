@@ -20,17 +20,26 @@
 
 ---
 
-## Input
+## Input ✓ implemented
 
 ### Mouse + Keyboard
-- **WASD** — move
-- **Mouse** — aim / shoot direction
+- **WASD / Arrow keys** — move
+- **Mouse position** — aim; **mouse button held** — fire
 
-### Gamepad
+### Gamepad ✓ implemented
 - **Left analog stick** — move
-- **Right analog stick** — aim / shoot direction
+- **Right analog stick** — aim; pushing stick past `GAMEPAD_FIRE_THRESHOLD` fires
 
-### Input Abstraction
-- Both schemes normalize to a **movement vector** and an **aim vector**
-- Game logic never needs to know which device is active
-- Supports simultaneous use: Player 1 gamepad, Player 2 mouse+keyboard (or both gamepad)
+### Device Priority ✓ implemented
+- Gamepad is preferred; `InputSystem.getState()` checks `gamepad.connected` each frame and falls back to mouse+keyboard automatically
+- Radial deadzone (`GAMEPAD_DEADZONE`) with smooth rescaling applied to both sticks
+- Future: configuration screen to override device preference and test controls
+
+### Ship Rotation ✓ implemented
+- Ship rotates to face the **aim direction** when non-zero (right stick or mouse cursor)
+- Falls back to **movement direction** when only moving with no aim input
+
+### Input Abstraction ✓ implemented
+- `InputSystem` normalizes both schemes to `{ move: Vector, aim: Vector, isFiring: boolean }`
+- `PlayerActor` and all game logic are device-agnostic
+- Co-op: each `PlayerActor` will get its own `InputSystem` instance (P1 gamepad, P2 mouse+keyboard, or both gamepad)
