@@ -135,14 +135,14 @@ Live in `src/systems/` — independent of any single actor:
 
 | System | Responsibility |
 |---|---|
-| `InputSystem` | Normalizes gamepad + mouse/keyboard to movement vector + aim vector; device-agnostic output |
+| `InputSystem` ✓ | Normalizes gamepad + mouse/keyboard to movement/aim/fire/panicPressed; device-agnostic output |
 | `MazeGenerator` ✓ | Generates room graph from seed + tunable parameters; outputs node/edge structure (`src/maze/MazeGenerator.ts`) |
 | `RoomManager` ✓ | Tracks room state (including cleared set), triggers transitions, handles room reset (`src/rooms/RoomManager.ts`) |
-| `DamageSystem` | Implements full damage resolution flow (shield → health → threshold → upgrade loss) |
-| `UpgradeManager` | Tracks and applies shooter type, weapon power, and shield state |
-| `ScoreManager` | Score accumulation, streak timer, multiplier, room clear and time bonuses |
-| `AudioManager` | Wraps Tone.js; exposes named trigger methods (e.g. `AudioManager.play('enemy:hit')`) |
-| `BulletPool` | Object pool for bullet actors — pre-allocates, recycles on despawn, avoids GC spikes |
+| `DamageSystem` ✓ | Implemented inside `SharedPlayerState.applyDamage` — shield absorption → health → threshold → upgrade loss |
+| `UpgradeManager` ✓ | Implemented inside `SharedPlayerState` — shooterType, weaponPower, shield, panicButton tracking and application |
+| `ScoreManager` | Score accumulation, streak timer, multiplier, room clear and time bonuses — deferred |
+| `AudioManager` | Wraps Tone.js; exposes named trigger methods — deferred |
+| `BulletPool` | Object pool for bullet actors — deferred |
 
 ---
 

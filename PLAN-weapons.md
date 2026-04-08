@@ -9,7 +9,7 @@
 
 ---
 
-## Primary Weapon — Dot Shot
+## Primary Weapon — Dot Shot ✓ implemented
 
 Bullets appear as small bright white dots. Linear upgrade path:
 
@@ -17,33 +17,35 @@ Bullets appear as small bright white dots. Linear upgrade path:
 |---|---|---|
 | 1 | Single Shot | One dot fired in aim direction |
 | 2 | Dual Shot | Dots fired simultaneously forward and backward |
-| 3 | Cardinal Shot | Dots fired in all four cardinal directions simultaneously |
+| 3 | Cardinal Shot | Dots fired in all four cardinal directions simultaneously (relative to aim) |
 
 - Upgrade path is linear: Single → Dual → Cardinal
 - Higher levels are strictly more powerful — no trade-offs within this track
+- `PlayerActor.spawnBullets()` reads `SharedPlayerState.shooterType` each frame
 
 ---
 
-## Weapon Power Upgrade
+## Weapon Power Upgrade ✓ implemented
 
-- Increases bullet damage per level
-- Independent of shooter type — both tracks can be held simultaneously
+- Multiplies bullet damage: `BULLET.DAMAGE × (1 + (level−1) × 0.5)` — level 1 = 1×, level 2 = 1.5×, level 3 = 2×, etc.
+- Independent of shooter type — both tracks held simultaneously
 - Display: square with bright dot inside × level count (e.g. ⊡ × 3)
 
 ---
 
-## Upgrade Pickups
+## Upgrade Pickups ✓ implemented
 
-- Appear as flashing deep blue and white circles with interior vector graphic showing upgrade type
-- Player collides to collect — no button press required
-- Respawn on room entry or periodic timer in cleared rooms
+- Appear as smoothly fading circles (sine-wave lerp between muted blue #0000aa and 75% white #bfbfbf, period 1.2s)
+- Interior vector graphic identifies upgrade type; outer/inner colors fade in opposite phase
+- Player collides to collect — no button press required (`PickupActor`, `ex.CollisionType.Passive`)
+- Respawn on room entry or periodic timer in cleared rooms — deferred (RoomManager pickup placement not yet implemented)
 
-### Pickup Interior Graphics
-- Shooter type upgrades: dot(s) with directional lines showing the firing pattern
-- Weapon power: dot-in-square icon
-- Shield: box-with-X icon
-- Panic button: top hat icon
-- Health replenishment: vector drawn red heart
+### Pickup Interior Graphics ✓ implemented
+- Shooter type: line with dot at tip (forward direction)
+- Weapon power: dot-in-square icon (⊡)
+- Shield: box-with-X icon (⊠)
+- Panic button: top hat shape
+- Health replenishment: vector drawn red heart (two arcs + converging lines to point)
 - Extra life: miniature white ship (triangle + nacelle geometry, always white)
 
 ---
@@ -66,9 +68,9 @@ Consumables share the same flashing blue/white circle appearance as upgrades but
 
 ---
 
-## Shield Upgrade
+## Shield Upgrade ✓ implemented
 
-- Display: box-with-X icon × level count (e.g. ⊠ × 3)
+- Display: box-with-X icon × level count + charge bar (e.g. ⊠ × 3 [====  ])
 - Each shield level reduces the amount of damage that reaches the health pool — reduction scales with level count
 - Shield has a charge pool that depletes as damage is absorbed
 - When charge is fully exhausted: one shield level is lost, charge replenishes to new level's maximum
@@ -77,10 +79,11 @@ Consumables share the same flashing blue/white circle appearance as upgrades but
 
 ---
 
-## Panic Button
+## Panic Button ✓ implemented
 
 - Display: top hat icon × count (e.g. 🎩 × 5)
 - Deployed on demand via a dedicated input — not continuous fire (`Space` on keyboard+mouse; any face button on gamepad)
+- `PlayerActor` calls `SharedPlayerState.deployPanic()` → returns damage value → iterates scene actors with `isEnemy` flag
 - Instantly deals flat damage to every enemy in the room simultaneously
 - Flat damage means proportionally less effective against high-health enemies (bosses)
 - **Power scales with current count** — more stored = more damage per use
@@ -90,7 +93,7 @@ Consumables share the same flashing blue/white circle appearance as upgrades but
 
 ---
 
-## Damage Resolution Flow
+## Damage Resolution Flow ✓ implemented (`SharedPlayerState.applyDamage`)
 
 On any hit, in order:
 

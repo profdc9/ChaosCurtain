@@ -2,21 +2,21 @@
 
 ## Philosophy
 
-All debug tooling is isolated to a single `DebugScene` and a `DebugConfig` object. Nothing debug-related leaks into normal gameplay code — game systems only check `DebugConfig` at initialization time, not per-frame. Removing debug access is a matter of hiding the menu entry point, not auditing scattered conditionals.
+All debug tooling is isolated to `DebugConfig.ts` and `DebugOverlay`. Nothing debug-related leaks into normal gameplay code — game systems only check `DebugConfig` at initialization time, not per-frame.
 
 ---
 
-## Access
+## Access ✓ implemented (edit-file approach; menu deferred until main menu exists)
 
-- **Entry point:** Secret keypress on the main menu (same mechanism as the seed entry field) opens the Debug Menu
-- Debug Menu is a full `DebugScene` — not an overlay, not a modal — so it has its own clean UI and is clearly separated from normal gameplay
-- Game launches normally after confirming debug settings; all overrides apply on that run only (not persisted)
+- **Current entry point:** Edit `src/constants/DebugConfig.ts` directly and reload. Fields are commented out by default; uncomment and set values to activate overrides.
+- **Planned:** Secret keypress on main menu opens a `DebugScene` UI — deferred until `MainMenuScene` is built.
+- Game applies overrides on startup; all changes are session-only (not persisted).
 
 ---
 
-## DebugConfig Object
+## DebugConfig Object ✓ implemented
 
-Lives in `src/constants/DebugConfig.ts`. All fields are optional — `undefined` means "use normal game value." A `DEBUG_ENABLED` flag gates whether the debug menu entry point is visible at all (set via build-time env var or a simple compile-time constant).
+Lives in `src/constants/DebugConfig.ts`. All fields are optional — `undefined` means "use normal game value."
 
 ```
 DebugConfig {
@@ -48,7 +48,7 @@ DebugConfig {
 
 ---
 
-## Debug Menu Sections
+## Debug Menu Sections (planned — pending MainMenuScene)
 
 ### Maze Settings
 - Seed (text input — blank = random)
@@ -76,9 +76,9 @@ DebugConfig {
 
 ---
 
-## Debug Overlay
+## Debug Overlay ✓ implemented (`src/ui/DebugOverlay.ts`)
 
-A **permanent dev tool** — accessible independently of debug mode via a dedicated key combo (e.g. `F3` or backtick `` ` ``). Not hidden behind the debug menu.
+A **permanent dev tool** — accessible independently of debug mode via `` ` `` or `F3`. Not hidden behind the debug menu.
 
 Displays in a corner of the screen (small, semi-transparent vector text):
 
@@ -97,11 +97,17 @@ Damage numbers float above the hit target briefly (same vector font, small size)
 
 ---
 
-## Panic Button Input
+## Panic Button Input ✓ implemented
 
 | Device | Input |
 |---|---|
 | Keyboard + mouse | `Space` |
 | Gamepad | Any of the four face buttons (A/B/X/Y or Cross/Circle/Square/Triangle) |
 
-Panic button fires on press, not hold. Input is ignored if panic count is zero.
+Panic button fires on press, not hold (`keyboard.wasPressed` / `gp.wasButtonPressed`). Input is ignored if panic count is zero.
+
+---
+
+## Runtime God Mode Toggle ✓ implemented
+
+`G` key toggles `SharedPlayerState.godMode` at runtime without reloading. Visible in overlay (`God: ON/off`). Also settable via `DebugConfig.godMode` for sessions that should start with it on.
