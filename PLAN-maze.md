@@ -68,7 +68,7 @@
 
 ### Doors ✓ implemented
 - Drawn as a **narrow hollow rectangle** across the door gap (stroke only, no fill — vector display authentic)
-- **Locked** (enemies still alive): white rectangle, player cannot pass; touching it does nothing
+- **Locked** (enemies still alive): red rectangle, player cannot pass; touching it does nothing
 - **Unlocked** (room cleared): green rectangle, player touching it triggers the open animation
 - **Opening animation**: rectangle shrinks along its long dimension (horizontal on N/S walls, vertical on E/W walls) until it disappears
 - **Transition fires** when the bar is fully gone — player is placed at the opposite door in the new room
