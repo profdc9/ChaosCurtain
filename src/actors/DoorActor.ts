@@ -3,7 +3,7 @@ import { DOOR, ROOM } from '../constants';
 import type { DoorSide } from '../rooms/RoomDef';
 
 /**
- * A door is a white bar drawn across a gap in the wall.
+ * A door is a colored bar drawn across a gap in the wall.
  *
  * States:
  *  - Closed + locked   → Fixed collider, full-length bar, player touch does nothing
@@ -106,7 +106,7 @@ export class DoorActor extends ex.Actor {
     if (this.progress <= 0) return;
 
     ctx.save();
-    ctx.strokeStyle = this.locked ? '#ffffff' : '#00ff00';
+    ctx.strokeStyle = this.locked ? '#ff3333' : '#00ff00';
     ctx.lineWidth = 1.5;
 
     const half = s / 2;
