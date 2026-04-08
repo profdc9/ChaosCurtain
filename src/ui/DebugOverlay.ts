@@ -5,9 +5,9 @@ import { RoomManager } from '../rooms/RoomManager';
 import { StrokeFont, FONT_COARSENESS } from './StrokeFont';
 import { HealthComponent } from '../components/HealthComponent';
 
-const FONT_SIZE = 12;
-const LINE_HEIGHT = 16;
-const PADDING = 8;
+const FONT_SIZE = 6;
+const LINE_HEIGHT = 9;
+const PADDING = 6;
 
 /** Toggle with backtick (`) or F3. */
 export class DebugOverlay extends ex.ScreenElement {
@@ -48,10 +48,16 @@ export class DebugOverlay extends ex.ScreenElement {
       this.smoothFps = this.smoothFps * 0.9 + fps * 0.1;
     }
 
-    // Toggle overlay
     const kb = engine.input.keyboard;
+
+    // Toggle overlay
     if (kb.wasPressed(ex.Keys.Backquote) || kb.wasPressed(ex.Keys.F3)) {
       this.visible = !this.visible;
+    }
+
+    // Toggle god mode at runtime
+    if (kb.wasPressed(ex.Keys.G)) {
+      this.state.godMode = !this.state.godMode;
     }
   }
 
@@ -100,7 +106,7 @@ export class DebugOverlay extends ex.ScreenElement {
     ];
 
     // Draw panel outline
-    const panelW = 280;
+    const panelW = 160;
     const panelH = PADDING * 2 + lines.length * LINE_HEIGHT;
     const panelX = GAME.WIDTH - panelW - 10;
     const panelY = ROOM.HUD_HEIGHT + 10;
@@ -119,8 +125,8 @@ export class DebugOverlay extends ex.ScreenElement {
     }
 
     // Toggle hint (bottom-right)
-    const hint = '` or F3: toggle overlay';
-    const hintW = StrokeFont.measure(hint, 10);
-    StrokeFont.draw(ctx, hint, GAME.WIDTH - hintW - 8, GAME.HEIGHT - 14, 10, '#333355', 1, FONT_COARSENESS);
+    const hint = '`/F3: overlay  G: god mode';
+    const hintW = StrokeFont.measure(hint, FONT_SIZE);
+    StrokeFont.draw(ctx, hint, GAME.WIDTH - hintW - 8, GAME.HEIGHT - 12, FONT_SIZE, '#333355', 1, FONT_COARSENESS);
   }
 }
