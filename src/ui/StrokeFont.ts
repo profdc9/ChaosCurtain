@@ -5,13 +5,17 @@ interface CharData {
   paths: Array<Array<[number, number]>>;
 }
 
-// Pre-extracted Hershey futural font data (y increases downward, canvas convention).
-// minY = top of character, maxY = bottom of character.
+// Hershey futural font data uses Y-up (mathematical) coordinates:
+// maxY = top of character (largest Y = highest on screen), minY = bottom / descenders.
 const FONT = fontData as unknown as Record<string, CharData>;
 const SPACE = FONT[' '];
 
-// Total character height in Hershey units (same for all characters in this font).
+// Total character height in Hershey units (ascender top to descender bottom).
 const FONT_HEIGHT = SPACE.bounds.maxY - SPACE.bounds.minY; // 21
+
+// Global top-of-ascender reference used by all characters for baseline alignment.
+// Using a per-glyph maxY would produce top-alignment (caps and lowercase misaligned).
+const FONT_TOP_Y = SPACE.bounds.maxY;
 
 // Minimum accumulated path length (Hershey units) before a segment is committed.
 // Higher = coarser, more angular letterforms. Font height is 21 units.
@@ -62,14 +66,14 @@ export class StrokeFont {
     for (const ch of text) {
       const glyph = FONT[ch] ?? SPACE;
       const glyphLeft = glyph.bounds.minX;
-      const glyphMaxY = glyph.bounds.maxY;
 
       for (const path of glyph.paths) {
         if (path.length < 2) continue;
 
         // Map a Hershey point to canvas coordinates.
+        // FONT_TOP_Y is a global reference so all glyphs share the same baseline.
         const cx = (pt: [number, number]) => x + (cursorX + pt[0] - glyphLeft) * scale;
-        const cy = (pt: [number, number]) => y + (glyphMaxY - pt[1]) * scale;
+        const cy = (pt: [number, number]) => y + (FONT_TOP_Y - pt[1]) * scale;
 
         ctx.beginPath();
         ctx.moveTo(cx(path[0]), cy(path[0]));
