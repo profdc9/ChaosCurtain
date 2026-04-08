@@ -90,6 +90,16 @@ export const DART = {
   FRAGMENT_LIFETIME_MAX: 1.0,
 } as const;
 
+// Maze generation configuration
+export const MAZE_GEN = {
+  GRID_W: 5,
+  GRID_H: 4,
+  SEED: 12345,
+  EASY_TIER: 0.33,  // difficulty < this → wanderers only
+  MED_TIER:  0.66,  // difficulty < this → wanderers + light darts
+                    // difficulty >= MED_TIER → wanderers + heavy darts
+} as const;
+
 // Damage and hit feedback
 export const DAMAGE = {
   LIGHT_HIT_THRESHOLD: 15,

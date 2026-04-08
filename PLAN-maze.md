@@ -1,17 +1,20 @@
 # ChaosCurtain — Maze & Room System
 
-## Maze Generation
+## Maze Generation ✓ implemented
 
 - Procedurally generated, simply connected (perfect) maze — no loops, one path between any two rooms
-- Single entry point and single exit point
-- Seeded PRNG — any maze is fully reproducible from its seed
-- Tunable parameters:
-  - Grid dimensions (4×4 to 8×8)
-  - Room merge probability
-  - Enemy density per room
-  - Spawner count per room
-  - Pickup density
-  - Boss room frequency
+- Single entry point `(0,0)` and single exit point (farthest cell by BFS from entry)
+- Seeded PRNG (Mulberry32 in `src/utils/SeededRandom.ts`) — any seed fully reproduces the maze
+- `src/maze/MazeGenerator.ts` — recursive backtracking DFS; outputs `MazeResult` with `rooms`, `startRoomId`, `exitRoomId`
+- `src/rooms/MazeGraph.ts` — calls `generateMaze(MAZE_GEN.SEED, MAZE_GEN.GRID_W, MAZE_GEN.GRID_H)`; exports `MAZE`, `START_ROOM_ID`, `EXIT_ROOM_ID`
+- Tunable via `MAZE_GEN` constants: `GRID_W` (default 5), `GRID_H` (default 4), `SEED`
+- Tunable parameters (partially implemented):
+  - Grid dimensions ✓
+  - Enemy density per room ✓ (scales with difficulty tier)
+  - Room merge probability — deferred (requires variable room dimensions + camera)
+  - Spawner count per room — deferred (spawners not yet implemented)
+  - Pickup density — deferred (pickups not yet implemented)
+  - Boss room frequency — deferred (bosses not yet implemented)
 
 ---
 
@@ -37,16 +40,17 @@
 
 ## Room State & Progression
 
-### Cleared Rooms
+### Cleared Rooms ✓ implemented
 - All enemies and spawner machines destroyed
-- Doors permanently open
-- Player can freely backtrack through cleared rooms
-- Pickups respawn on room entry or on a periodic timer
+- `RoomManager` tracks cleared room IDs in a persistent `Set<string>` across transitions
+- On re-entry: no enemies spawned, doors unlock immediately
+- Doors permanently open (green) — player can freely backtrack
+- Pickups respawn on room entry or on a periodic timer — deferred (pickups not yet implemented)
 
-### Uncleared Rooms
+### Uncleared Rooms ✓ implemented
 - If the player exits before clearing, the room fully resets to its initial state
 - Player can re-enter and attempt again — reset applies every time they leave without clearing
-- Door-blocking enemies deliberately position between players and exits to make fleeing costly
+- Door-blocking enemies deliberately position between players and exits to make fleeing costly — deferred (door-blocker movement behavior not yet implemented)
 
 ### Navigation Flow
 - Player starts at the maze entry room
@@ -62,10 +66,10 @@
 - Pure vector display aesthetic: lines define the boundary, nothing else
 - Gaps cut into the line where doors exist
 
-### Doors
-- Drawn as a **narrow hollow white rectangle** across the door gap (stroke only, no fill — vector display authentic)
-- **Locked** (enemies still alive): full-length rectangle, player cannot pass; touching it does nothing
-- **Unlocked** (room cleared): full-length rectangle, player touching it triggers the open animation
+### Doors ✓ implemented
+- Drawn as a **narrow hollow rectangle** across the door gap (stroke only, no fill — vector display authentic)
+- **Locked** (enemies still alive): white rectangle, player cannot pass; touching it does nothing
+- **Unlocked** (room cleared): green rectangle, player touching it triggers the open animation
 - **Opening animation**: rectangle shrinks along its long dimension (horizontal on N/S walls, vertical on E/W walls) until it disappears
 - **Transition fires** when the bar is fully gone — player is placed at the opposite door in the new room
 - **Entry door** in the new room starts open and immediately plays the close animation (expands into place) to show the door sealing behind the player

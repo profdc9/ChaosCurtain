@@ -136,8 +136,8 @@ Live in `src/systems/` — independent of any single actor:
 | System | Responsibility |
 |---|---|
 | `InputSystem` | Normalizes gamepad + mouse/keyboard to movement vector + aim vector; device-agnostic output |
-| `MazeGenerator` | Generates room graph from seed + tunable parameters; outputs node/edge structure |
-| `RoomManager` | Tracks room state, triggers transitions, manages spawner timers, handles room reset |
+| `MazeGenerator` ✓ | Generates room graph from seed + tunable parameters; outputs node/edge structure (`src/maze/MazeGenerator.ts`) |
+| `RoomManager` ✓ | Tracks room state (including cleared set), triggers transitions, handles room reset (`src/rooms/RoomManager.ts`) |
 | `DamageSystem` | Implements full damage resolution flow (shield → health → threshold → upgrade loss) |
 | `UpgradeManager` | Tracks and applies shooter type, weapon power, and shield state |
 | `ScoreManager` | Score accumulation, streak timer, multiplier, room clear and time bonuses |
@@ -146,13 +146,13 @@ Live in `src/systems/` — independent of any single actor:
 
 ---
 
-## Maze Generator Output
+## Maze Generator Output ✓ implemented
 
 Generator produces a **room graph**:
-- **Nodes** — rooms, each carrying: dimensions, difficulty value (BFS distance from exit), spawner definitions, pickup list, door positions
-- **Edges** — connections between rooms with door positions on each side
+- **Nodes** — rooms, each carrying: `difficulty` (0.0 = easy, 1.0 = hardest), `isExit`, enemy spawn list, door positions
+- **Edges** — connections between rooms encoded as `DoorDef` arrays with `targetRoomId`
 
-`RoomManager` consumes this graph and instantiates the actual Excalibur actors for the current room on demand.
+`RoomManager` consumes this graph and instantiates Excalibur actors for the current room on demand. Cleared room IDs are retained in `RoomManager.clearedRooms` across transitions.
 
 ---
 

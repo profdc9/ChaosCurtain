@@ -1,37 +1,12 @@
-import type { RoomDef } from './RoomDef';
+import { generateMaze } from '../maze/MazeGenerator';
+import { MAZE_GEN } from '../constants';
 
-/**
- * Hard-coded 4-room test maze:
- *
- *   [A: 3 wanderers] --east--> [B: 5 wanderers] --east--> [C: 7 wanderers]
- *                                      |
- *                                    south
- *                                      |
- *                               [D: 4 wanderers]
- */
-export const MAZE: Record<string, RoomDef> = {
-  roomA: {
-    id: 'roomA',
-    doors: [{ side: 'east', targetRoomId: 'roomB' }],
-    enemies: [{ type: 'wanderer', count: 3 }],
-  },
-  roomB: {
-    id: 'roomB',
-    doors: [
-      { side: 'west', targetRoomId: 'roomA' },
-      { side: 'east', targetRoomId: 'roomC' },
-      { side: 'south', targetRoomId: 'roomD' },
-    ],
-    enemies: [{ type: 'wanderer', count: 3 }, { type: 'dart', count: 2 }],
-  },
-  roomC: {
-    id: 'roomC',
-    doors: [{ side: 'west', targetRoomId: 'roomB' }],
-    enemies: [{ type: 'wanderer', count: 3 }, { type: 'dart', count: 4 }],
-  },
-  roomD: {
-    id: 'roomD',
-    doors: [{ side: 'north', targetRoomId: 'roomB' }],
-    enemies: [{ type: 'wanderer', count: 2 }, { type: 'dart', count: 3 }],
-  },
-};
+const { rooms, startRoomId, exitRoomId } = generateMaze(
+  MAZE_GEN.SEED,
+  MAZE_GEN.GRID_W,
+  MAZE_GEN.GRID_H,
+);
+
+export const MAZE = rooms;
+export const START_ROOM_ID = startRoomId;
+export const EXIT_ROOM_ID = exitRoomId;

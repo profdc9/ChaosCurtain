@@ -106,7 +106,7 @@ export class DoorActor extends ex.Actor {
     if (this.progress <= 0) return;
 
     ctx.save();
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = this.locked ? '#ffffff' : '#00ff00';
     ctx.lineWidth = 1.5;
 
     const half = s / 2;

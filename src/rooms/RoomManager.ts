@@ -47,6 +47,8 @@ export class RoomManager {
   private doors: DoorActor[] = [];
   private enemyCount = 0;
   private diedHandler: (() => void) | null = null;
+  private currentRoomId = '';
+  private readonly clearedRooms = new Set<string>();
 
   constructor(scene: ex.Scene, player: ex.Actor) {
     this.scene = scene;
@@ -73,9 +75,15 @@ export class RoomManager {
     }
 
     // Build new room.
+    this.currentRoomId = roomDef.id;
     this.buildWalls(roomDef);
     this.buildDoors(roomDef, entranceSide);
-    this.spawnEnemies(roomDef);
+
+    const alreadyCleared = this.clearedRooms.has(roomDef.id);
+
+    if (!alreadyCleared) {
+      this.spawnEnemies(roomDef);
+    }
 
     // Position player.
     if (entranceSide !== null) {
@@ -84,7 +92,7 @@ export class RoomManager {
     }
 
     // Watch for enemy deaths to check room clear.
-    this.enemyCount = roomDef.enemies.reduce((sum, e) => sum + e.count, 0);
+    this.enemyCount = alreadyCleared ? 0 : roomDef.enemies.reduce((sum, e) => sum + e.count, 0);
 
     if (this.enemyCount === 0) {
       this.unlockDoors();
@@ -256,6 +264,7 @@ export class RoomManager {
   }
 
   private unlockDoors(): void {
+    this.clearedRooms.add(this.currentRoomId);
     for (const door of this.doors) {
       door.unlock();
     }

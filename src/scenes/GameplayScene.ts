@@ -4,7 +4,7 @@ import { PlayerActor } from '../actors/PlayerActor';
 import { HUD } from '../ui/HUD';
 import { GameEvents } from '../utils/GameEvents';
 import { RoomManager } from '../rooms/RoomManager';
-import { MAZE } from '../rooms/MazeGraph';
+import { MAZE, START_ROOM_ID } from '../rooms/MazeGraph';
 
 export class GameplayScene extends ex.Scene {
   private sharedState!: SharedPlayerState;
@@ -25,6 +25,6 @@ export class GameplayScene extends ex.Scene {
     this.add(hud);
 
     this.roomManager = new RoomManager(this, player);
-    this.roomManager.load(MAZE['roomA'], null);
+    this.roomManager.load(MAZE[START_ROOM_ID], null);
   }
 }
