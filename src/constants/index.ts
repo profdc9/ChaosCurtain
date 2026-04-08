@@ -163,9 +163,9 @@ export const UPGRADE = {
 export const PICKUP = {
   RADIUS: 22,
   CANVAS_SIZE: 56,
-  FLASH_PERIOD: 0.5,          // seconds per full flash cycle
-  COLOR_A: '#0000cd',          // deep blue
-  COLOR_B: '#ffffff',          // white
+  FLASH_PERIOD: 1.2,          // seconds per full fade cycle
+  COLOR_A: '#0000aa',          // muted blue
+  COLOR_B: '#bfbfbf',          // 75% white
   INTERIOR_SCALE: 0.52,        // interior graphic fits within this fraction of RADIUS
   HEALTH_RESTORE_RATIO: 0.5,   // fraction of max health restored on collection
 } as const;

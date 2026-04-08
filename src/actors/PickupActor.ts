@@ -4,6 +4,18 @@ import { SharedPlayerState } from '../state/SharedPlayerState';
 import { GameEvents } from '../utils/GameEvents';
 import type { PickupType } from '../types/GameTypes';
 
+/** Linearly interpolate between two hex color strings by factor t (0=a, 1=b). */
+function lerpColor(a: string, b: string, t: number): string {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  const ar = (pa >> 16) & 0xff, ag = (pa >> 8) & 0xff, ab = pa & 0xff;
+  const br = (pb >> 16) & 0xff, bg = (pb >> 8) & 0xff, bb = pb & 0xff;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const b2 = Math.round(ab + (bb - ab) * t);
+  return `rgb(${r},${g},${b2})`;
+}
+
 export class PickupActor extends ex.Actor {
   readonly pickupType: PickupType;
   private flashTimer = 0;
@@ -65,10 +77,10 @@ export class PickupActor extends ex.Actor {
     const r = PICKUP.RADIUS;
     const ir = r * PICKUP.INTERIOR_SCALE;
 
-    // Flash: alternate outer/inner colors twice per FLASH_PERIOD
-    const phase = (this.flashTimer % PICKUP.FLASH_PERIOD) / PICKUP.FLASH_PERIOD;
-    const outerColor = phase < 0.5 ? PICKUP.COLOR_A : PICKUP.COLOR_B;
-    const innerColor = phase < 0.5 ? PICKUP.COLOR_B : PICKUP.COLOR_A;
+    // Smooth sine fade between muted blue and 75% white
+    const t = (Math.sin((this.flashTimer / PICKUP.FLASH_PERIOD) * Math.PI * 2) + 1) / 2;
+    const outerColor = lerpColor(PICKUP.COLOR_A, PICKUP.COLOR_B, t);
+    const innerColor = lerpColor(PICKUP.COLOR_A, PICKUP.COLOR_B, 1 - t);
 
     ctx.clearRect(0, 0, s, s);
     ctx.save();
