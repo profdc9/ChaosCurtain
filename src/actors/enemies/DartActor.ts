@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { DART, BULLET } from '../../constants';
+import { DART } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
@@ -59,9 +59,9 @@ export class DartActor extends ex.Actor {
 
   onInitialize(_engine: ex.Engine): void {
     this.on('collisionstart', (evt) => {
-      const other = evt.other as ex.Actor & { isBullet?: boolean };
+      const other = evt.other as ex.Actor & { isBullet?: boolean; damage?: number };
       if (other.isBullet) {
-        this.healthComp.takeDamage(BULLET.DAMAGE);
+        this.healthComp.takeDamage(other.damage ?? 0);
         other.kill();
       }
     });

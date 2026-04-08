@@ -1,12 +1,21 @@
+import type { UpgradeType, PickupType } from '../types/GameTypes';
+
 type EventHandler<T> = (payload: T) => void;
 
 export interface GameEventMap {
-  'enemy:hit': { damage: number; x: number; y: number };
-  'enemy:died': { points: number; x: number; y: number };
-  'player:hit': { damage: number };
-  'bullet:fired': Record<string, never>;
-  'score:changed': { score: number };
-  'health:changed': { current: number; max: number };
+  'enemy:hit':        { damage: number; x: number; y: number };
+  'enemy:died':       { points: number; x: number; y: number };
+  'player:hit':       { damage: number };
+  'player:upgraded':  { upgradeType: UpgradeType };
+  'player:downgraded':{ upgradeType: UpgradeType };
+  'bullet:fired':     Record<string, never>;
+  'panic:deployed':   { damage: number };
+  'score:changed':    { score: number };
+  'health:changed':   { current: number; max: number };
+  'fleet:lost':       Record<string, never>;
+  'game:over':        Record<string, never>;
+  'game:won':         Record<string, never>;
+  'pickup:collected': { pickupType: PickupType };
 }
 
 class TypedEventBus {

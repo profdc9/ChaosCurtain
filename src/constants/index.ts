@@ -141,3 +141,31 @@ export const SCORE = {
   STREAK_THRESHOLDS: [3, 5, 8] as const,
   STREAK_MULTIPLIERS: [2, 3, 4] as const,
 } as const;
+
+// Upgrade system configuration
+export const UPGRADE = {
+  // Weapon power: each level multiplies base bullet damage by this additional factor
+  // Level 1 = 1.0×, Level 2 = 1.5×, Level 3 = 2.0×, etc.
+  WEAPON_POWER_DAMAGE_MULTIPLIER: 0.5,
+  MAX_WEAPON_POWER: 5,
+  // Shield: fraction of raw damage absorbed per shield level (capped at 0.9 total)
+  SHIELD_REDUCTION_PER_LEVEL: 0.15,
+  // Total absorb capacity per shield level before losing a level
+  SHIELD_CHARGE_PER_LEVEL: 60,
+  MAX_SHIELD_LEVEL: 5,
+  // Panic button: damage = base + (count × per_button) before decrementing count
+  PANIC_DAMAGE_BASE: 30,
+  PANIC_DAMAGE_PER_BUTTON: 10,
+  MAX_PANIC_COUNT: 9,
+} as const;
+
+// Pickup actor configuration
+export const PICKUP = {
+  RADIUS: 22,
+  CANVAS_SIZE: 56,
+  FLASH_PERIOD: 0.5,          // seconds per full flash cycle
+  COLOR_A: '#0000cd',          // deep blue
+  COLOR_B: '#ffffff',          // white
+  INTERIOR_SCALE: 0.52,        // interior graphic fits within this fraction of RADIUS
+  HEALTH_RESTORE_RATIO: 0.5,   // fraction of max health restored on collection
+} as const;

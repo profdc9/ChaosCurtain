@@ -3,12 +3,13 @@ import { PLAYER } from '../constants';
 import { InputSystem } from '../systems/InputSystem';
 import { BulletActor } from './BulletActor';
 import { SharedPlayerState } from '../state/SharedPlayerState';
+import { GameEvents } from '../utils/GameEvents';
 
 export class PlayerActor extends ex.Actor {
-  readonly isPlayer = true; // duck-typed by DoorActor for collision detection
+  readonly isPlayer = true; // duck-typed by DoorActor and PickupActor
+  readonly sharedState: SharedPlayerState;
 
   private readonly input: InputSystem;
-  private readonly sharedState: SharedPlayerState;
   private fireTimer = 0;
   private readonly playerCanvas: ex.Canvas;
   private readonly shipColor: string;
@@ -46,7 +47,7 @@ export class PlayerActor extends ex.Actor {
         takeDamage?: (n: number) => void;
       };
       if (other.isEnemy) {
-        this.sharedState.takeDamage(other.collisionDamage ?? 0);
+        this.sharedState.applyDamage(other.collisionDamage ?? 0);
         other.takeDamage?.(PLAYER.COLLISION_DAMAGE_TO_ENEMY);
       }
     });
@@ -63,20 +64,54 @@ export class PlayerActor extends ex.Actor {
       this.vel = ex.Vector.Zero;
     }
 
-    // Rotation: face aim direction when non-zero (works for both control schemes),
-    // fall back to movement direction so the ship points forward when not aiming.
+    // Rotation: face aim direction when non-zero, fall back to movement direction
     if (state.aim.size > 0) {
       this.rotation = Math.atan2(state.aim.y, state.aim.x);
     } else if (state.move.size > 0) {
       this.rotation = Math.atan2(state.move.y, state.move.x);
     }
 
-    // Firing
+    // Firing — multi-direction based on shooterType
     this.fireTimer += dt;
     if (state.isFiring && state.aim.size > 0 && this.fireTimer >= PLAYER.FIRE_RATE) {
       this.fireTimer = 0;
-      const bullet = new BulletActor(this.pos.clone(), state.aim);
-      engine.currentScene.add(bullet);
+      this.spawnBullets(engine, state.aim);
+    }
+
+    // Panic button — edge-triggered
+    if (state.panicPressed) {
+      const damage = this.sharedState.deployPanic();
+      if (damage !== null) {
+        this.applyPanicDamage(engine, damage);
+      }
+    }
+  }
+
+  private spawnBullets(engine: ex.Engine, aim: ex.Vector): void {
+    const damage = this.sharedState.bulletDamage;
+    const directions: ex.Vector[] = [aim];
+
+    if (this.sharedState.shooterType >= 2) {
+      directions.push(aim.negate());
+    }
+    if (this.sharedState.shooterType >= 3) {
+      // Cardinal: add the two perpendicular directions
+      const perp = ex.vec(-aim.y, aim.x);
+      directions.push(perp, perp.negate());
+    }
+
+    for (const dir of directions) {
+      engine.currentScene.add(new BulletActor(this.pos.clone(), dir, damage));
+    }
+    GameEvents.emit('bullet:fired', {});
+  }
+
+  private applyPanicDamage(engine: ex.Engine, damage: number): void {
+    for (const actor of engine.currentScene.actors) {
+      const enemy = actor as ex.Actor & { isEnemy?: boolean; takeDamage?: (n: number) => void };
+      if (enemy.isEnemy && enemy.takeDamage) {
+        enemy.takeDamage(damage);
+      }
     }
   }
 

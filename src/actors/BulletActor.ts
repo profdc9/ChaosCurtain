@@ -3,14 +3,17 @@ import { BULLET, ROOM } from '../constants';
 
 export class BulletActor extends ex.Actor {
   readonly isBullet = true;
+  readonly damage: number;
 
-  constructor(pos: ex.Vector, direction: ex.Vector) {
+  constructor(pos: ex.Vector, direction: ex.Vector, damage: number = BULLET.DAMAGE) {
     super({
       pos,
       vel: direction.scale(BULLET.SPEED),
       collisionType: ex.CollisionType.Passive,
       radius: BULLET.RADIUS,
     });
+
+    this.damage = damage;
 
     const canvas = new ex.Canvas({
       width: BULLET.CANVAS_SIZE,

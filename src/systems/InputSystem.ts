@@ -5,6 +5,7 @@ export interface InputState {
   move: ex.Vector;
   aim: ex.Vector;
   isFiring: boolean;
+  panicPressed: boolean; // edge-triggered: true only on the frame the button is first pressed
 }
 
 /**
@@ -21,16 +22,18 @@ function applyDeadzone(x: number, y: number): ex.Vector {
 
 /**
  * Normalises raw input from either a gamepad (preferred when connected) or
- * mouse + keyboard into a device-agnostic { move, aim, isFiring } state.
+ * mouse + keyboard into a device-agnostic { move, aim, isFiring, panicPressed } state.
  *
  * Gamepad layout (standard mapping):
- *   Left stick  → movement vector
- *   Right stick → aim vector + fire when magnitude > GAMEPAD_FIRE_THRESHOLD
+ *   Left stick       → movement vector
+ *   Right stick      → aim vector + fire when magnitude > GAMEPAD_FIRE_THRESHOLD
+ *   Any face button  → panic (A/B/X/Y or Cross/Circle/Square/Triangle)
  *
  * Mouse + keyboard layout:
  *   WASD / Arrow keys → movement vector
  *   Mouse position    → aim vector
  *   Mouse button held → fire
+ *   Space             → panic
  */
 export class InputSystem {
   private mouseDown = false;
@@ -71,7 +74,13 @@ export class InputSystem {
     const aim      = aimMag > 0 ? aimRaw.normalize() : ex.Vector.Zero;
     const isFiring = aimMag >= INPUT.GAMEPAD_FIRE_THRESHOLD;
 
-    return { move: move.size > 0 ? move.normalize() : ex.Vector.Zero, aim, isFiring };
+    const panicPressed =
+      gp.wasButtonPressed(ex.Buttons.Face1) ||
+      gp.wasButtonPressed(ex.Buttons.Face2) ||
+      gp.wasButtonPressed(ex.Buttons.Face3) ||
+      gp.wasButtonPressed(ex.Buttons.Face4);
+
+    return { move: move.size > 0 ? move.normalize() : ex.Vector.Zero, aim, isFiring, panicPressed };
   }
 
   // ── Mouse + Keyboard ─────────────────────────────────────────────────────────
@@ -92,8 +101,9 @@ export class InputSystem {
     const aimRaw     = mouseWorld.sub(playerPos);
     const aim        = aimRaw.size > 1 ? aimRaw.normalize() : ex.Vector.Zero;
 
-    const isFiring = this.mouseDown && aim.size > 0;
+    const isFiring   = this.mouseDown && aim.size > 0;
+    const panicPressed = kb.wasPressed(ex.Keys.Space);
 
-    return { move, aim, isFiring };
+    return { move, aim, isFiring, panicPressed };
   }
 }

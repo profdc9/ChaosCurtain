@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { WANDERER, BULLET } from '../../constants';
+import { WANDERER } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
@@ -45,9 +45,9 @@ export class WandererActor extends ex.Actor {
   onInitialize(_engine: ex.Engine): void {
     this.on('collisionstart', (evt) => {
       // Bullet imports handled via dynamic check on class name to avoid circular imports
-      const other = evt.other as ex.Actor & { isBullet?: boolean };
+      const other = evt.other as ex.Actor & { isBullet?: boolean; damage?: number };
       if (other.isBullet) {
-        this.healthComp.takeDamage(BULLET.DAMAGE);
+        this.healthComp.takeDamage(other.damage ?? 0);
         other.kill();
       }
     });
