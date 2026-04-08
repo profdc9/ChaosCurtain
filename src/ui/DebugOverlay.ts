@@ -2,12 +2,13 @@ import * as ex from 'excalibur';
 import { GAME, ROOM, MAZE_GEN } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { RoomManager } from '../rooms/RoomManager';
-import { StrokeFont, FONT_COARSENESS } from './StrokeFont';
+import { StrokeFont } from './StrokeFont';
 import { HealthComponent } from '../components/HealthComponent';
 
-const FONT_SIZE = 6;
-const LINE_HEIGHT = 9;
-const PADDING = 6;
+const FONT_SIZE = 7;
+const LINE_HEIGHT = 11;
+const PADDING = 8;
+const COARSENESS = 0; // full-res required at small sizes; COARSENESS skips too many segments
 
 /** Toggle with backtick (`) or F3. */
 export class DebugOverlay extends ex.ScreenElement {
@@ -106,7 +107,7 @@ export class DebugOverlay extends ex.ScreenElement {
     ];
 
     // Draw panel outline
-    const panelW = 160;
+    const panelW = 280;
     const panelH = PADDING * 2 + lines.length * LINE_HEIGHT;
     const panelX = GAME.WIDTH - panelW - 10;
     const panelY = ROOM.HUD_HEIGHT + 10;
@@ -119,7 +120,7 @@ export class DebugOverlay extends ex.ScreenElement {
     let y = panelY + PADDING + FONT_SIZE;
     for (const line of lines) {
       if (line !== '') {
-        StrokeFont.draw(ctx, line, panelX + PADDING, y - FONT_SIZE, FONT_SIZE, '#aaaacc', 1, FONT_COARSENESS);
+        StrokeFont.draw(ctx, line, panelX + PADDING, y - FONT_SIZE, FONT_SIZE, '#aaaacc', 1, COARSENESS);
       }
       y += LINE_HEIGHT;
     }
@@ -127,6 +128,6 @@ export class DebugOverlay extends ex.ScreenElement {
     // Toggle hint (bottom-right)
     const hint = '`/F3: overlay  G: god mode';
     const hintW = StrokeFont.measure(hint, FONT_SIZE);
-    StrokeFont.draw(ctx, hint, GAME.WIDTH - hintW - 8, GAME.HEIGHT - 12, FONT_SIZE, '#333355', 1, FONT_COARSENESS);
+    StrokeFont.draw(ctx, hint, GAME.WIDTH - hintW - 8, GAME.HEIGHT - 12, FONT_SIZE, '#333355', 1, COARSENESS);
   }
 }
