@@ -8,6 +8,8 @@ import { GameEvents } from '../utils/GameEvents';
 export class PlayerActor extends ex.Actor {
   readonly isPlayer = true; // duck-typed by DoorActor and PickupActor
   readonly sharedState: SharedPlayerState;
+  /** Pull forces applied by active Wrangler tethers. Keys are wrangler actor instances. */
+  readonly pullRegistry = new Map<object, ex.Vector>();
 
   private readonly input: InputSystem;
   private fireTimer = 0;
@@ -62,6 +64,11 @@ export class PlayerActor extends ex.Actor {
       this.vel = state.move.scale(PLAYER.SPEED);
     } else {
       this.vel = ex.Vector.Zero;
+    }
+
+    // Apply wrangler tether pulls
+    for (const pull of this.pullRegistry.values()) {
+      this.vel = this.vel.add(pull);
     }
 
     // Rotation: face aim direction when non-zero, fall back to movement direction

@@ -5,7 +5,7 @@ export interface DoorDef {
   targetRoomId: string;
 }
 
-export type SpawnEnemyType = 'wanderer' | 'dart';
+export type SpawnEnemyType = 'wanderer' | 'dart' | 'wrangler' | 'satellite';
 
 export interface SpawnerDef {
   type: SpawnEnemyType;

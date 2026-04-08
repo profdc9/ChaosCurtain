@@ -68,7 +68,7 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 
 ---
 
-### Wrangler
+### Wrangler ✓ implemented
 - **Geometry:** Large central circle (pure green) with four smaller circles (yellow) at 90° intervals, connected by short line segments
 - **Movement:** Wanders passively until player enters detection radius, then approaches player
 - **Attack:** Deploys a tether line (light yellow) once within ~6× the player ship length
@@ -81,10 +81,16 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 - **Health:** Medium
 - **Collision damage:** Medium
 - **Destruction:** Central circle, four satellite circles, connecting segments all fly apart; tether snaps and vanishes; burning fragment animation
+- **Implementation notes:**
+  - Two states: `wander` (random direction changes) → `approach` (steer toward player) once within `DETECTION_RADIUS`
+  - Tether activates once within `TETHER_RANGE`; persists until death; pull registered via `player.pullRegistry` Map (keyed by wrangler instance) so multiple wranglers stack
+  - Tether line drawn via `graphics.onPostDraw` in actor-local space (`ExcaliburGraphicsContext.drawLine`)
+  - Color shifts on damage: body green → red, satellites yellow → red
+  - Spawns in medium rooms (~17% chance) and hard rooms (~33% chance)
 
 ---
 
-### Satellite
+### Satellite ✓ implemented
 - **Geometry:** Circle (blue) with four lines passing through the center at 45° intervals (0/180, 45/225, 90/270, 135/315°); lines protrude slightly beyond the circle edge giving an 8-pointed spiky appearance; spikes are gray; spikes rotate continuously around the center as the satellite moves
 - **Movement:** Spirals inward toward the player — velocity is primarily tangential (perpendicular to the player-satellite line) with a small inward radial component; angular velocity increases with room difficulty
 - **Attack:** None — purely a collision threat
@@ -93,6 +99,13 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 - **Collision damage:** Medium
 - **Destruction:** Circle and eight spike segments fly apart individually, burning fragment animation
 - **Scaling:** Angular velocity scales directly with room difficulty
+- **Implementation notes:**
+  - Constant tangential speed (perpendicular to player direction) + constant inward radial speed; tangential speed lerps from `TANGENTIAL_SPEED_MIN` to `TANGENTIAL_SPEED_MAX` with difficulty
+  - `spinSign` (+1/-1) chosen randomly at construction for CW vs CCW orbit
+  - `spokeAngle` accumulated each frame for visual spoke rotation; used directly in `drawSatellite` and `spawnFragments`
+  - Fragments: 1 circle diameter line + 8 half-spoke lines (2 per spoke × 4 spokes)
+  - Wall clamping: position-only (velocity recomputed each frame, no bounce needed)
+  - Spawns guaranteed in every hard room (difficulty ≥ 0.66)
 
 ---
 

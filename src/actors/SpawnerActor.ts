@@ -5,6 +5,8 @@ import { FragmentActor } from './FragmentActor';
 import { GameEvents } from '../utils/GameEvents';
 import { WandererActor } from './enemies/WandererActor';
 import { DartActor } from './enemies/DartActor';
+import { WranglerActor } from './enemies/WranglerActor';
+import { SatelliteActor } from './enemies/SatelliteActor';
 import type { SpawnEnemyType } from '../rooms/RoomDef';
 
 export class SpawnerActor extends ex.Actor {
@@ -17,6 +19,7 @@ export class SpawnerActor extends ex.Actor {
   private readonly player: ex.Actor;
   private readonly registerEnemy: (actor: ex.Actor) => void;
   private readonly spawnInterval: number;
+  private readonly difficulty: number;
   private spawnTimer: number;
   private currentColor = '#ffffff';
   private readonly spawnerCanvas: ex.Canvas;
@@ -26,6 +29,7 @@ export class SpawnerActor extends ex.Actor {
     y: number,
     enemyType: SpawnEnemyType,
     spawnInterval: number,
+    difficulty: number,
     player: ex.Actor,
     registerEnemy: (actor: ex.Actor) => void,
   ) {
@@ -34,6 +38,7 @@ export class SpawnerActor extends ex.Actor {
     this.enemyType = enemyType;
     this.spawnInterval = spawnInterval;
     this.spawnTimer = spawnInterval * SPAWNER.INITIAL_DELAY_FACTOR;
+    this.difficulty = difficulty;
     this.player = player;
     this.registerEnemy = registerEnemy;
 
@@ -78,10 +83,13 @@ export class SpawnerActor extends ex.Actor {
   }
 
   private spawnEnemy(): void {
-    const actor =
-      this.enemyType === 'wanderer'
-        ? new WandererActor(this.pos.x, this.pos.y)
-        : new DartActor(this.pos.x, this.pos.y, this.player);
+    let actor: ex.Actor;
+    switch (this.enemyType) {
+      case 'wanderer':  actor = new WandererActor(this.pos.x, this.pos.y); break;
+      case 'dart':      actor = new DartActor(this.pos.x, this.pos.y, this.player); break;
+      case 'wrangler':  actor = new WranglerActor(this.pos.x, this.pos.y, this.player); break;
+      case 'satellite': actor = new SatelliteActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
+    }
     this.registerEnemy(actor);
   }
 
@@ -148,8 +156,12 @@ export class SpawnerActor extends ex.Actor {
     // Portrait — always its native color (independent of health)
     if (this.enemyType === 'wanderer') {
       this.drawWandererPortrait(ctx);
-    } else {
+    } else if (this.enemyType === 'dart') {
       this.drawDartPortrait(ctx);
+    } else if (this.enemyType === 'wrangler') {
+      this.drawWranglerPortrait(ctx);
+    } else {
+      this.drawSatellitePortrait(ctx);
     }
 
     ctx.restore();
@@ -161,6 +173,38 @@ export class SpawnerActor extends ex.Actor {
     ctx.strokeStyle = '#888888';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(-ph, -ph, ph * 2, ph * 2);
+  }
+
+  /** Small green circle with four yellow dots at 90° intervals. */
+  private drawWranglerPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#00ff00';
+    ctx.beginPath();
+    ctx.arc(0, 0, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffff00';
+    for (const [dx, dy] of [[0, -13], [13, 0], [0, 13], [-13, 0]]) {
+      ctx.beginPath();
+      ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  /** Small blue circle with gray cross through center. */
+  private drawSatellitePortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#888888';
+    for (let i = 0; i < 4; i++) {
+      const angle = i * Math.PI / 4;
+      ctx.beginPath();
+      ctx.moveTo(-Math.cos(angle) * 12, -Math.sin(angle) * 12);
+      ctx.lineTo( Math.cos(angle) * 12,  Math.sin(angle) * 12);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#4466ff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   /** Small cyan chevron pointing right inside the box. */

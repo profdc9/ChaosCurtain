@@ -90,6 +90,55 @@ export const DART = {
   FRAGMENT_LIFETIME_MAX: 1.0,
 } as const;
 
+// Wrangler enemy configuration
+export const WRANGLER = {
+  BODY_RADIUS: 18,
+  SATELLITE_RADIUS: 7,
+  SATELLITE_DIST: 36,          // center-to-center from body to each satellite
+  WANDER_SPEED: 45,
+  APPROACH_SPEED: 90,
+  DETECTION_RADIUS: 260,       // player within this → start approaching
+  TETHER_RANGE: 240,           // player within this → deploy tether (6 × PLAYER.SHIP_LENGTH)
+  PULL_FORCE: 82,              // px/sec pull applied to player toward wrangler
+  HEALTH: 120,
+  COLLISION_DAMAGE: 20,
+  COLOR_BODY: '#00ff00',
+  COLOR_SATELLITES: '#ffff00',
+  COLOR_TETHER: '#ffff88',
+  CANVAS_SIZE: 96,
+  COLLIDER_RADIUS: 22,
+  POINT_VALUE: 300,
+  DIRECTION_CHANGE_MIN: 1.5,
+  DIRECTION_CHANGE_MAX: 3.5,
+  FRAGMENT_SPEED_MIN: 50,
+  FRAGMENT_SPEED_MAX: 140,
+  FRAGMENT_ANGULAR_VEL_MAX: 4.0,
+  FRAGMENT_LIFETIME_MIN: 0.5,
+  FRAGMENT_LIFETIME_MAX: 1.3,
+} as const;
+
+// Satellite enemy configuration
+export const SATELLITE = {
+  CIRCLE_RADIUS: 18,
+  SPOKE_LENGTH: 26,            // half-length of each line through center (protrudes 8px beyond circle)
+  TANGENTIAL_SPEED_MIN: 100,   // px/sec tangential speed at difficulty 0
+  TANGENTIAL_SPEED_MAX: 200,   // px/sec tangential speed at difficulty 1
+  RADIAL_SPEED: 30,            // px/sec constant inward radial speed
+  SPOKE_ROTATION_SPEED: 1.5,   // rad/sec visual spoke rotation
+  HEALTH: 80,
+  COLLISION_DAMAGE: 20,
+  COLOR_CIRCLE: '#4466ff',
+  COLOR_SPOKES: '#888888',
+  CANVAS_SIZE: 64,
+  COLLIDER_RADIUS: 20,
+  POINT_VALUE: 250,
+  FRAGMENT_SPEED_MIN: 60,
+  FRAGMENT_SPEED_MAX: 160,
+  FRAGMENT_ANGULAR_VEL_MAX: 5.0,
+  FRAGMENT_LIFETIME_MIN: 0.4,
+  FRAGMENT_LIFETIME_MAX: 1.1,
+} as const;
+
 // Input configuration
 export const INPUT = {
   GAMEPAD_DEADZONE: 0.15,       // radial deadzone applied to both sticks

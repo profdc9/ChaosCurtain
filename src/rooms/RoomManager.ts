@@ -274,11 +274,29 @@ export class RoomManager {
   }
 
   private spawnMachines(roomDef: RoomDef): void {
-    const margin = SPAWNER.HALF_SIZE + 20;
-    const xMin = ROOM.INNER_LEFT + margin;
-    const xMax = ROOM.INNER_RIGHT - margin;
-    const yMin = ROOM.INNER_TOP + margin;
-    const yMax = ROOM.INNER_BOTTOM - margin;
+    // Place machines at the four corners and center, far from doors (which sit at wall midpoints).
+    // Shuffle so successive machines cycle through distinct positions.
+    const CM = 100; // corner margin from inner wall edges
+    const L = ROOM.INNER_LEFT  + CM;
+    const R = ROOM.INNER_RIGHT - CM;
+    const T = ROOM.INNER_TOP   + CM;
+    const B = ROOM.INNER_BOTTOM - CM;
+    const cx = (ROOM.INNER_LEFT + ROOM.INNER_RIGHT) / 2;
+    const cy = (ROOM.INNER_TOP  + ROOM.INNER_BOTTOM) / 2;
+
+    const candidates = [
+      ex.vec(L, T), ex.vec(R, T), ex.vec(L, B), ex.vec(R, B), ex.vec(cx, cy),
+    ].sort(() => Math.random() - 0.5);
+
+    let posIdx = 0;
+    const nextPos = (): ex.Vector => {
+      const base = candidates[posIdx % candidates.length];
+      posIdx++;
+      // Small jitter so stacked machines don't sit exactly on top of each other
+      const jx = (Math.random() - 0.5) * 40;
+      const jy = (Math.random() - 0.5) * 40;
+      return ex.vec(base.x + jx, base.y + jy);
+    };
 
     const interval =
       SPAWNER.SPAWN_INTERVAL_SLOW +
@@ -286,12 +304,12 @@ export class RoomManager {
 
     for (const spawnDef of roomDef.spawners) {
       for (let i = 0; i < spawnDef.count; i++) {
-        const x = xMin + Math.random() * (xMax - xMin);
-        const y = yMin + Math.random() * (yMax - yMin);
+        const pos = nextPos();
         const spawner = new SpawnerActor(
-          x, y,
+          pos.x, pos.y,
           spawnDef.type,
           interval,
+          roomDef.difficulty,
           this.player,
           (actor) => {
             this._liveCount++;
