@@ -10,7 +10,9 @@
 | [PLAN-visuals.md](PLAN-visuals.md) | Hit feedback, damage color shift, destruction animation |
 | [PLAN-enemies.md](PLAN-enemies.md) | Enemy architecture, movement/attack behaviors, all enemy types |
 | [PLAN-weapons.md](PLAN-weapons.md) | Primary weapon, upgrades, shield, panic button, damage resolution, balance notes |
-| [PLAN-ui.md](PLAN-ui.md) | Audio, menus, HUD, pause, game over/victory screens, scoring system |
+| [PLAN-debug.md](PLAN-debug.md) | Debug menu, DebugConfig overrides, debug overlay, enemy/upgrade/pickup testing tools |
+| [PLAN-audio.md](PLAN-audio.md) | Tone.js chiptune audio, sound effects, proximity warnings, background music |
+| [PLAN-ui.md](PLAN-ui.md) | Menus, HUD, pause, game over/victory screens, scoring system |
 | [PLAN-architecture.md](PLAN-architecture.md) | Build tooling, project structure, scenes, entity/component design, collision, event bus, systems, vertical slice scope |
 
 ---

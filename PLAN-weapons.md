@@ -43,6 +43,26 @@ Bullets appear as small bright white dots. Linear upgrade path:
 - Weapon power: dot-in-square icon
 - Shield: box-with-X icon
 - Panic button: top hat icon
+- Health replenishment: vector drawn red heart
+- Extra life: miniature white ship (triangle + nacelle geometry, always white)
+
+---
+
+## Consumable Pickups
+
+Consumables share the same flashing blue/white circle appearance as upgrades but grant a one-time effect rather than a persistent level increase.
+
+### Health Replenishment
+- **Interior graphic:** Vector-drawn red heart (stroke only, no fill — consistent with aesthetic)
+- **Effect:** Restores half the maximum health bar on collection
+- **Spawn:** Appears randomly throughout the run — in uncleared and cleared rooms; not tied to room state
+- **Does not stack** — collecting multiple health pickups each independently restore half max health from current value
+
+### Extra Life
+- **Interior graphic:** Miniature white ship (same triangle + nacelle geometry as the player ship, scaled to fit the pickup circle — always white regardless of player color)
+- **Effect:** Adds one ship to the shared fleet count
+- **Spawn:** Appears randomly, but **only after a room is fully cleared** — never appears in uncleared rooms; one may appear per cleared room (RNG check on clear)
+- **Rationale:** Rewards thorough clearing over rushing toward the exit; makes fleet count a meaningful resource rather than a fixed quantity
 
 ---
 
@@ -60,7 +80,7 @@ Bullets appear as small bright white dots. Linear upgrade path:
 ## Panic Button
 
 - Display: top hat icon × count (e.g. 🎩 × 5)
-- Deployed on demand via a dedicated input — not continuous fire
+- Deployed on demand via a dedicated input — not continuous fire (`Space` on keyboard+mouse; any face button on gamepad)
 - Instantly deals flat damage to every enemy in the room simultaneously
 - Flat damage means proportionally less effective against high-health enemies (bosses)
 - **Power scales with current count** — more stored = more damage per use
@@ -106,5 +126,5 @@ Game balance requires careful playtesting and iteration. Key considerations:
 **Structural aids for balancing:**
 - Seeded PRNG means any problematic scenario is exactly reproducible for targeted testing
 - All damage values, thresholds, speeds, and timings should be named constants — never magic numbers
-- A debug mode showing room difficulty, enemy health, and damage values in real time is essential during development
+- A debug overlay (toggle with `F3`/backtick) shows room difficulty, enemy health, damage events, and upgrade state in real time — see PLAN-debug.md
 - Tunable maze parameters (enemy density, spawner count, pickup density) are the primary per-room balancing levers
