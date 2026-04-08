@@ -5,17 +5,23 @@ interface CharData {
   paths: Array<Array<[number, number]>>;
 }
 
-// Hershey futural font data uses Y-up (mathematical) coordinates:
-// maxY = top of character (largest Y = highest on screen), minY = bottom / descenders.
+// Hershey futural uses Y-up (mathematical) coordinates.
+// maxY = top of character (highest screen point), minY = bottom / descenders.
+// The space glyph has null bounds (no paths), so we derive metrics from 'A' instead.
 const FONT = fontData as unknown as Record<string, CharData>;
 const SPACE = FONT[' '];
 
-// Total character height in Hershey units (ascender top to descender bottom).
-const FONT_HEIGHT = SPACE.bounds.maxY - SPACE.bounds.minY; // 21
+// 'A': maxY=12 (cap top), minY=-9 (bottom/baseline) → height 21.
+const REF = FONT['A'];
 
-// Global top-of-ascender reference used by all characters for baseline alignment.
-// Using a per-glyph maxY would produce top-alignment (caps and lowercase misaligned).
-const FONT_TOP_Y = SPACE.bounds.maxY;
+// Total character height in Hershey units used to convert `size` (px) to a scale factor.
+const FONT_HEIGHT = REF.bounds.maxY - REF.bounds.minY; // 21
+
+// Global top-of-ascender Y, shared by all glyphs for consistent baseline alignment.
+// Per-glyph maxY would top-align each character independently, misaligning mixed case.
+// Caps and ascending lowercase (d, b, h…) have maxY=12; short lowercase (a, e, n…)
+// have maxY=5, so without this fix they float above the caps baseline.
+const FONT_TOP_Y = REF.bounds.maxY; // 12
 
 // Minimum accumulated path length (Hershey units) before a segment is committed.
 // Higher = coarser, more angular letterforms. Font height is 21 units.

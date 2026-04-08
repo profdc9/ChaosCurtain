@@ -5,8 +5,8 @@ import { RoomManager } from '../rooms/RoomManager';
 import { StrokeFont } from './StrokeFont';
 import { HealthComponent } from '../components/HealthComponent';
 
-const FONT_SIZE = 5;
-const LINE_HEIGHT = 26;
+const FONT_SIZE = 11;
+const LINE_HEIGHT = 16;
 const PADDING = 8;
 const COARSENESS = 0; // full-res required at small sizes; COARSENESS skips too many segments
 
