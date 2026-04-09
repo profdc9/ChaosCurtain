@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { SPAWNER } from '../constants';
+import { SPAWNER, WORM } from '../constants';
 import { HealthComponent } from '../components/HealthComponent';
 import { FragmentActor } from './FragmentActor';
 import { GameEvents } from '../utils/GameEvents';
@@ -7,6 +7,8 @@ import { WandererActor } from './enemies/WandererActor';
 import { DartActor } from './enemies/DartActor';
 import { WranglerActor } from './enemies/WranglerActor';
 import { SatelliteActor } from './enemies/SatelliteActor';
+import { WormActor } from './enemies/WormActor';
+import { BlasterActor } from './enemies/BlasterActor';
 import type { SpawnEnemyType } from '../rooms/RoomDef';
 
 export class SpawnerActor extends ex.Actor {
@@ -89,6 +91,12 @@ export class SpawnerActor extends ex.Actor {
       case 'dart':      actor = new DartActor(this.pos.x, this.pos.y, this.player); break;
       case 'wrangler':  actor = new WranglerActor(this.pos.x, this.pos.y, this.player); break;
       case 'satellite': actor = new SatelliteActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
+      case 'worm': {
+        const splitsLeft = this.difficulty >= 0.66 ? 2 : 1;
+        actor = new WormActor(this.pos.x, this.pos.y, this.player, WORM.HEALTH, splitsLeft, this.registerEnemy);
+        break;
+      }
+      case 'blaster': actor = new BlasterActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
     }
     this.registerEnemy(actor);
   }
@@ -160,8 +168,12 @@ export class SpawnerActor extends ex.Actor {
       this.drawDartPortrait(ctx);
     } else if (this.enemyType === 'wrangler') {
       this.drawWranglerPortrait(ctx);
-    } else {
+    } else if (this.enemyType === 'satellite') {
       this.drawSatellitePortrait(ctx);
+    } else if (this.enemyType === 'worm') {
+      this.drawWormPortrait(ctx);
+    } else {
+      this.drawBlasterPortrait(ctx);
     }
 
     ctx.restore();
@@ -205,6 +217,35 @@ export class SpawnerActor extends ex.Actor {
     ctx.beginPath();
     ctx.arc(0, 0, 8, 0, Math.PI * 2);
     ctx.stroke();
+  }
+
+  /** Two small brown circles connected by a yellow line. */
+  private drawWormPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#ffff00';
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.lineTo(10, 0);
+    ctx.stroke();
+    ctx.strokeStyle = '#c07830';
+    for (const x of [-10, 10]) {
+      ctx.beginPath();
+      ctx.arc(x, 0, 5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  /** Five small spike lines radiating from center. */
+  private drawBlasterPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * Math.PI * 2) / 5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5);
+      ctx.lineTo(Math.cos(angle) * 13, Math.sin(angle) * 13);
+      ctx.stroke();
+    }
   }
 
   /** Small cyan chevron pointing right inside the box. */

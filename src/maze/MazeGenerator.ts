@@ -56,15 +56,19 @@ function buildSpawners(difficulty: number, rng: SeededRandom): SpawnerDef[] {
 
   if (difficulty < EASY_TIER) {
     result.push({ type: 'wanderer', count: rng.nextInt(1, 2) });
+    if (rng.nextBool(0.33)) result.push({ type: 'worm', count: 1 });
   } else if (difficulty < MED_TIER) {
     result.push({ type: 'wanderer', count: 1 });
     result.push({ type: 'dart',     count: 1 });
-    if (rng.nextBool(0.17)) result.push({ type: 'wrangler', count: 1 });
+    result.push({ type: 'worm',     count: 1 });
+    if (rng.nextBool(0.06)) result.push({ type: 'wrangler', count: 1 });
   } else {
     result.push({ type: 'wanderer', count: 1 });
     result.push({ type: 'dart',     count: rng.nextInt(1, 2) });
-    if (rng.nextBool(0.33)) result.push({ type: 'wrangler', count: 1 });
+    result.push({ type: 'worm',     count: 1 });
     result.push({ type: 'satellite', count: 1 });
+    if (rng.nextBool(0.25)) result.push({ type: 'blaster',  count: 1 });
+    if (rng.nextBool(0.11)) result.push({ type: 'wrangler', count: 1 });
   }
 
   return result;

@@ -10,6 +10,8 @@ export class SharedPlayerState {
 
   /** When true, applyDamage is a no-op. Set from DebugConfig in GameplayScene. */
   godMode = false;
+  /** Multiplier on all incoming damage. 0.25 = easy, 1.0 = full/hard. */
+  damageScale: number = PLAYER.DAMAGE_SCALE;
 
   // Upgrade levels
   shooterType: 1 | 2 | 3 = 1;
@@ -49,7 +51,7 @@ export class SharedPlayerState {
    */
   applyDamage(raw: number): void {
     if (this.godMode) return;
-    let postShield = raw;
+    let postShield = raw * this.damageScale;
 
     if (this.shieldLevel > 0) {
       const reduction = Math.min(0.9, this.shieldLevel * UPGRADE.SHIELD_REDUCTION_PER_LEVEL);

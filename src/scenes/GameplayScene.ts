@@ -56,6 +56,7 @@ export class GameplayScene extends ex.Scene {
     const d = DebugConfig;
 
     if (d.godMode) s.godMode = true;
+    if (d.damageScale !== undefined) s.damageScale = d.damageScale;
 
     if (d.startMaxUpgrades) {
       s.shooterType = 3;

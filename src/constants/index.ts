@@ -38,6 +38,8 @@ export const PLAYER = {
   COLLIDER_RADIUS: 14,
   FIRE_RATE: 0.12,
   COLLISION_DAMAGE_TO_ENEMY: 5,
+  /** Multiplier on all incoming player damage. 0.25 = easy, 1.0 = full/hard. */
+  DAMAGE_SCALE: 0.25,
 } as const;
 
 // Bullet configuration
@@ -137,6 +139,55 @@ export const SATELLITE = {
   FRAGMENT_ANGULAR_VEL_MAX: 5.0,
   FRAGMENT_LIFETIME_MIN: 0.4,
   FRAGMENT_LIFETIME_MAX: 1.1,
+} as const;
+
+// Worm enemy configuration
+export const WORM = {
+  CIRCLE_RADIUS: 10,
+  MIN_SEP: 14,             // min circle center-to-center separation
+  MAX_SEP: 32,             // max circle center-to-center separation
+  OSCILLATION_SPEED: 3.0,  // rad/sec phase advance for inchworm animation
+  SPEED: 50,
+  TURN_RATE: 0.8,          // rad/sec steering toward player
+  HEALTH: 80,
+  COLLISION_DAMAGE: 10,
+  COLOR_CIRCLES: '#c07830',
+  COLOR_LINE: '#ffff00',
+  CANVAS_SIZE: 64,
+  COLLIDER_RADIUS: 22,
+  POINT_VALUE: 180,
+  FRAGMENT_SPEED_MIN: 50,
+  FRAGMENT_SPEED_MAX: 130,
+  FRAGMENT_ANGULAR_VEL_MAX: 4.0,
+  FRAGMENT_LIFETIME_MIN: 0.4,
+  FRAGMENT_LIFETIME_MAX: 1.0,
+} as const;
+
+// Blaster enemy configuration
+export const BLASTER = {
+  SPIKE_OUTER_RADIUS: 22,  // tip distance from center
+  SPIKE_INNER_RADIUS: 12,  // base corner distance from center
+  SPIKE_HALF_ANGLE: 0.3,   // radians — half-width of each spike base (~17°)
+  SPEED_MIN: 45,
+  SPEED_MAX: 110,          // scales with room difficulty
+  FIRE_RANGE: 110,         // ~2.75 × PLAYER.SHIP_LENGTH
+  FIRE_DAMAGE: 40,
+  STROBE_HZ: 2,            // complete gray↔white cycles per second
+  BOLT_LIFETIME: 0.5,      // seconds the lightning bolt lingers
+  BOLT_JAGS: 8,            // jag segments along the bolt
+  BOLT_JITTER: 18,         // px perpendicular jitter per jag point
+  COLOR_GRAY: '#888888',
+  COLOR_WHITE: '#ffffff',
+  HEALTH: 80,
+  COLLISION_DAMAGE: 20,
+  CANVAS_SIZE: 60,
+  COLLIDER_RADIUS: 18,
+  POINT_VALUE: 200,
+  FRAGMENT_SPEED_MIN: 60,
+  FRAGMENT_SPEED_MAX: 160,
+  FRAGMENT_ANGULAR_VEL_MAX: 5.0,
+  FRAGMENT_LIFETIME_MIN: 0.4,
+  FRAGMENT_LIFETIME_MAX: 1.0,
 } as const;
 
 // Input configuration

@@ -34,6 +34,8 @@ export interface DebugSettings {
   // ── Gameplay ──────────────────────────────────────────────────────────────────
   /** Player takes no damage. */
   godMode?: boolean;
+  /** Incoming damage multiplier. 0.25 = easy (default), 1.0 = full/hard. */
+  damageScale?: number;
 }
 
 /**

@@ -109,7 +109,7 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 
 ---
 
-### Worm
+### Worm ✓ implemented
 - **Geometry:** Two brown circles connected by a yellow line; line always oriented along the direction of movement; circles oscillate closer and farther apart as it moves — the line contracts and extends in a crawling inchworm rhythm
 - **Movement:** Slowly crawls in the general direction of the player
 - **Attack:** None — purely a collision threat
@@ -125,10 +125,18 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 - **Health:** Medium (halved on each split)
 - **Collision damage:** Light
 - **Destruction:** When a worm that cannot split further is depleted, its two circles and line fly apart with the burning fragment animation
+- **Implementation notes:**
+  - Constructor takes `health`, `splitsLeft` (1 = splits once, 2 = splits twice), and `registerEnemy` callback
+  - First hit triggers `doSplit()` instead of damage if `splitsLeft > 0`; emits `enemy:died` with 0 points to decrement `_liveCount` without awarding score; two offspring registered via callback
+  - Offspring each start with parent's current HP / 2; initial velocity perpendicular to parent velocity (one each way)
+  - Post-split worms steer toward player with `TURN_RATE`; `splitsLeft - 1` passed to offspring
+  - `splitsLeft` = 1 in easy/medium rooms, 2 in hard rooms (difficulty ≥ 0.66)
+  - `phase` randomized at construction to stagger oscillations across worms; separation = `MIN_SEP + (MAX_SEP - MIN_SEP) * (0.5 + 0.5 * sin(phase))`
+  - Fragments: head circle + tail circle + line, all fly outward along body axis
 
 ---
 
-### Blaster
+### Blaster ✓ implemented
 - **Geometry:** Five triangular spikes at 72° intervals — a pentagram with only the outer points, no interior segments or fill; strobes between gray and white at ~2 Hz
 - **Movement:** Moves slowly and directly toward the player (pure chaser); speed increases with room difficulty
 - **Attack:** Once within ~5–6× the player ship length, fires a bright white jagged lightning bolt line directly at the nearest player
@@ -140,6 +148,14 @@ All enemies defined so far are **kinetic threats** — they are the projectiles.
 - **Health:** Medium — intended to be destroyed before it reaches firing range
 - **Collision damage:** Medium
 - **Destruction:** Five spike segments fly apart individually with burning fragment animation; lightning bolt line fades simultaneously
+- **Implementation notes:**
+  - 10 spike segments (2 per spike × 5) precomputed at module load from `SPIKE_OUTER_RADIUS`, `SPIKE_INNER_RADIUS`, `SPIKE_HALF_ANGLE`
+  - Strobe: `Math.floor(elapsed * STROBE_HZ * 2) % 2` toggles gray/white every 0.25s
+  - Speed lerps `SPEED_MIN` → `SPEED_MAX` with difficulty; pure chaser (no steering delay)
+  - Fires when within `FIRE_RANGE` (110px): damages player via duck-typed `sharedState.applyDamage`, spawns `LightningBoltActor`, then disintegrates
+  - `LightningBoltActor`: full-screen canvas at world origin with `anchor (0,0)`; 8-point jagged path pre-generated at construction; fades over `BOLT_LIFETIME` seconds
+  - `dead` flag guards against double-fire from simultaneous bullet collision + range check
+  - Spawns at ~25% chance in hard rooms (difficulty ≥ 0.66); fire range halved from original spec after playtesting
 
 ---
 
