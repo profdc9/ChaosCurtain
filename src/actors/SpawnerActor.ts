@@ -20,6 +20,7 @@ export class SpawnerActor extends ex.Actor {
   private readonly enemyType: SpawnEnemyType;
   private readonly player: ex.Actor;
   private readonly registerEnemy: (actor: ex.Actor) => void;
+  private readonly getLiveCount: () => number;
   private readonly spawnInterval: number;
   private readonly difficulty: number;
   private spawnTimer: number;
@@ -34,6 +35,7 @@ export class SpawnerActor extends ex.Actor {
     difficulty: number,
     player: ex.Actor,
     registerEnemy: (actor: ex.Actor) => void,
+    getLiveCount: () => number,
   ) {
     super({ pos: ex.vec(x, y), collisionType: ex.CollisionType.Active });
 
@@ -43,6 +45,7 @@ export class SpawnerActor extends ex.Actor {
     this.difficulty = difficulty;
     this.player = player;
     this.registerEnemy = registerEnemy;
+    this.getLiveCount = getLiveCount;
 
     this.collider.useBoxCollider(SPAWNER.SIZE, SPAWNER.SIZE);
 
@@ -56,7 +59,7 @@ export class SpawnerActor extends ex.Actor {
     this.spawnerCanvas = new ex.Canvas({
       width: SPAWNER.CANVAS_SIZE,
       height: SPAWNER.CANVAS_SIZE,
-      cache: false,
+      cache: true,
       draw: (ctx) => this.drawSpawner(ctx),
     });
     this.graphics.use(this.spawnerCanvas);
@@ -80,7 +83,9 @@ export class SpawnerActor extends ex.Actor {
     this.spawnTimer -= delta / 1000;
     if (this.spawnTimer <= 0) {
       this.spawnTimer = this.spawnInterval;
-      this.spawnEnemy();
+      if (this.getLiveCount() < SPAWNER.MAX_LIVE_ENEMIES) {
+        this.spawnEnemy();
+      }
     }
   }
 
@@ -105,6 +110,7 @@ export class SpawnerActor extends ex.Actor {
     // White (#ffffff) → red (#ff0000)
     const gb = Math.floor(255 * healthRatio);
     this.currentColor = `rgb(255,${gb},${gb})`;
+    this.spawnerCanvas.flagDirty();
     this.triggerScalePulse(damage);
     GameEvents.emit('enemy:hit', { damage, x: this.pos.x, y: this.pos.y });
   }

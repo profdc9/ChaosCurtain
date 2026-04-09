@@ -216,6 +216,7 @@ export const SPAWNER = {
   SPAWN_INTERVAL_SLOW: 6.0,   // seconds per enemy at difficulty 0
   SPAWN_INTERVAL_FAST: 1.5,   // seconds per enemy at difficulty 1
   INITIAL_DELAY_FACTOR: 0.5,  // first spawn fires at interval × this
+  MAX_LIVE_ENEMIES: 20,        // spawners pause when total live count (spawners+enemies) reaches this
   CANVAS_SIZE: 64,
   FRAGMENT_SPEED_MIN: 60,
   FRAGMENT_SPEED_MAX: 160,

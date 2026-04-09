@@ -50,7 +50,7 @@ export class WranglerActor extends ex.Actor {
     this.wranglerCanvas = new ex.Canvas({
       width:  WRANGLER.CANVAS_SIZE,
       height: WRANGLER.CANVAS_SIZE,
-      cache: false,
+      cache: true,
       draw: (ctx) => this.drawWrangler(ctx),
     });
     this.graphics.use(this.wranglerCanvas);
@@ -161,6 +161,7 @@ export class WranglerActor extends ex.Actor {
     // Satellites: yellow (#ffff00) → red (#ff0000)
     const sg = Math.floor(255 * healthRatio);
     this.currentSatColor = `rgb(255,${sg},0)`;
+    this.wranglerCanvas.flagDirty();
   }
 
   private triggerScalePulse(damage: number): void {

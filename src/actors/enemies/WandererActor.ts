@@ -37,7 +37,7 @@ export class WandererActor extends ex.Actor {
     this.wandererCanvas = new ex.Canvas({
       width: WANDERER.CANVAS_SIZE,
       height: WANDERER.CANVAS_SIZE,
-      cache: false,
+      cache: true,
       draw: (ctx) => this.drawWanderer(ctx),
     });
     this.graphics.use(this.wandererCanvas);
@@ -78,6 +78,7 @@ export class WandererActor extends ex.Actor {
     const g = Math.floor(baseG * healthRatio);
     const b = Math.floor(baseB * healthRatio);
     this.currentColor = `rgb(${r},${g},${b})`;
+    this.wandererCanvas.flagDirty();
   }
 
   private triggerScalePulse(damage: number): void {

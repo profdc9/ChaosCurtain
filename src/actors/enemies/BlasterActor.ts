@@ -34,6 +34,7 @@ export class BlasterActor extends ex.Actor {
 
   private elapsed = 0;
   private dead = false;
+  private strobeState = -1; // -1 = uninitialized; tracks last drawn state to avoid redundant redraws
   private readonly blasterCanvas: ex.Canvas;
 
   constructor(x: number, y: number, player: ex.Actor, difficulty: number) {
@@ -57,7 +58,7 @@ export class BlasterActor extends ex.Actor {
     this.blasterCanvas = new ex.Canvas({
       width:  BLASTER.CANVAS_SIZE,
       height: BLASTER.CANVAS_SIZE,
-      cache: false,
+      cache: true,
       draw: (ctx) => this.drawBlaster(ctx),
     });
     this.graphics.use(this.blasterCanvas);
@@ -82,6 +83,13 @@ export class BlasterActor extends ex.Actor {
   onPreUpdate(engine: ex.Engine, delta: number): void {
     if (this.dead) return;
     this.elapsed += delta / 1000;
+
+    // Flag dirty only when strobe state flips (every 0.25s), not every frame
+    const newStrobeState = Math.floor(this.elapsed * BLASTER.STROBE_HZ * 2) % 2;
+    if (newStrobeState !== this.strobeState) {
+      this.strobeState = newStrobeState;
+      this.blasterCanvas.flagDirty();
+    }
 
     // Move directly toward player
     const toPlayer = this.playerRef.pos.sub(this.pos);
@@ -173,8 +181,7 @@ export class BlasterActor extends ex.Actor {
     const cx = s / 2;
     const cy = s / 2;
 
-    // Strobe: 2 full cycles/sec → state flips every 0.25s
-    const isWhite = Math.floor(this.elapsed * BLASTER.STROBE_HZ * 2) % 2 === 0;
+    const isWhite = this.strobeState === 0;
 
     ctx.clearRect(0, 0, s, s);
     ctx.save();

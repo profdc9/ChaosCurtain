@@ -52,7 +52,7 @@ export class DartActor extends ex.Actor {
     this.dartCanvas = new ex.Canvas({
       width: DART.CANVAS_SIZE,
       height: DART.CANVAS_SIZE,
-      cache: false,
+      cache: true,
       draw: (ctx) => this.drawDart(ctx),
     });
     this.graphics.use(this.dartCanvas);
@@ -105,6 +105,7 @@ export class DartActor extends ex.Actor {
     const g = Math.floor(255 * healthRatio);
     const b = Math.floor(255 * healthRatio);
     this.currentColor = `rgb(${r},${g},${b})`;
+    this.dartCanvas.flagDirty();
   }
 
   private triggerScalePulse(damage: number): void {

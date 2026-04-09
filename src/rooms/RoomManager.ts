@@ -315,6 +315,7 @@ export class RoomManager {
             this._liveCount++;
             this.add(actor);
           },
+          () => this._liveCount,
         );
         this._liveCount++;
         this.add(spawner);
