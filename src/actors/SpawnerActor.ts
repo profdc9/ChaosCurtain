@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { SPAWNER, WORM } from '../constants';
+import { SPAWNER, WANDERER, DART, WRANGLER, SATELLITE, WORM, BLASTER, BIRD_BOSS, SNAKE_BOSS } from '../constants';
 import { HealthComponent } from '../components/HealthComponent';
 import { FragmentActor } from './FragmentActor';
 import { GameEvents } from '../utils/GameEvents';
@@ -24,6 +24,7 @@ export class SpawnerActor extends ex.Actor {
   private readonly registerEnemy: (actor: ex.Actor) => void;
   private readonly getLiveCount: () => number;
   private readonly spawnInterval: number;
+  private readonly spawnPriority: number;
   private readonly difficulty: number;
   private readonly oneShot: boolean;
   private spawnTimer: number;
@@ -44,10 +45,12 @@ export class SpawnerActor extends ex.Actor {
     super({ pos: ex.vec(x, y), collisionType: ex.CollisionType.Active });
 
     this.enemyType = enemyType;
-    this.spawnInterval = spawnInterval;
+    const { intervalMultiplier, spawnPriority } = SpawnerActor.spawnParams(enemyType);
+    this.spawnInterval = spawnInterval * intervalMultiplier;
+    this.spawnPriority = spawnPriority;
     this.oneShot = oneShot;
     // One-shot spawners fire immediately (timer = 0); others fire after half-interval
-    this.spawnTimer = oneShot ? 0 : spawnInterval * SPAWNER.INITIAL_DELAY_FACTOR;
+    this.spawnTimer = oneShot ? 0 : this.spawnInterval * SPAWNER.INITIAL_DELAY_FACTOR;
     this.difficulty = difficulty;
     this.player = player;
     this.registerEnemy = registerEnemy;
@@ -94,7 +97,8 @@ export class SpawnerActor extends ex.Actor {
         this.spawnEnemy();
       } else {
         this.spawnTimer = this.spawnInterval;
-        if (this.getLiveCount() < SPAWNER.MAX_LIVE_ENEMIES) {
+        const threshold = this.getLiveCount() * this.spawnPriority / SPAWNER.MAX_LIVE_ENEMIES;
+        if (Math.random() > threshold) {
           this.spawnEnemy();
         }
       }
@@ -290,6 +294,19 @@ export class SpawnerActor extends ex.Actor {
       ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5);
       ctx.lineTo(Math.cos(angle) * 13, Math.sin(angle) * 13);
       ctx.stroke();
+    }
+  }
+
+  private static spawnParams(type: SpawnEnemyType): { intervalMultiplier: number; spawnPriority: number } {
+    switch (type) {
+      case 'wanderer':  return { intervalMultiplier: WANDERER.INTERVAL_MULTIPLIER,  spawnPriority: WANDERER.SPAWNING_PRIORITY  };
+      case 'dart':      return { intervalMultiplier: DART.INTERVAL_MULTIPLIER,      spawnPriority: DART.SPAWNING_PRIORITY      };
+      case 'wrangler':  return { intervalMultiplier: WRANGLER.INTERVAL_MULTIPLIER,  spawnPriority: WRANGLER.SPAWNING_PRIORITY  };
+      case 'satellite': return { intervalMultiplier: SATELLITE.INTERVAL_MULTIPLIER, spawnPriority: SATELLITE.SPAWNING_PRIORITY };
+      case 'worm':      return { intervalMultiplier: WORM.INTERVAL_MULTIPLIER,      spawnPriority: WORM.SPAWNING_PRIORITY      };
+      case 'blaster':   return { intervalMultiplier: BLASTER.INTERVAL_MULTIPLIER,   spawnPriority: BLASTER.SPAWNING_PRIORITY   };
+      case 'bird_boss': return { intervalMultiplier: BIRD_BOSS.INTERVAL_MULTIPLIER, spawnPriority: BIRD_BOSS.SPAWNING_PRIORITY };
+      case 'snake_boss':return { intervalMultiplier: SNAKE_BOSS.INTERVAL_MULTIPLIER,spawnPriority: SNAKE_BOSS.SPAWNING_PRIORITY};
     }
   }
 

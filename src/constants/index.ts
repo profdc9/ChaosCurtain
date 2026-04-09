@@ -53,6 +53,8 @@ export const BULLET = {
 
 // Wanderer enemy configuration
 export const WANDERER = {
+  INTERVAL_MULTIPLIER: 1.0,  // relative spawn speed (higher = slower)
+  SPAWNING_PRIORITY: 0.8,    // throttle strength near cap (higher = more throttled; weak enemies yield slots to harder ones)
   SIZE: 24,
   HALF_SIZE: 12,
   SPEED: 70,
@@ -75,6 +77,8 @@ export const WANDERER = {
 
 // Dart enemy configuration
 export const DART = {
+  INTERVAL_MULTIPLIER: 1.5,
+  SPAWNING_PRIORITY: 0.4,
   SPEED: 160,
   TURN_RATE: 2.5,         // radians per second (gradual homing, not instant)
   HEALTH: 30,
@@ -94,6 +98,8 @@ export const DART = {
 
 // Wrangler enemy configuration
 export const WRANGLER = {
+  INTERVAL_MULTIPLIER: 2.0,
+  SPAWNING_PRIORITY: 0.2,
   BODY_RADIUS: 18,
   SATELLITE_RADIUS: 7,
   SATELLITE_DIST: 36,          // center-to-center from body to each satellite
@@ -121,6 +127,8 @@ export const WRANGLER = {
 
 // Satellite enemy configuration
 export const SATELLITE = {
+  INTERVAL_MULTIPLIER: 1.5,
+  SPAWNING_PRIORITY: 0.35,
   CIRCLE_RADIUS: 18,
   SPOKE_LENGTH: 26,            // half-length of each line through center (protrudes 8px beyond circle)
   TANGENTIAL_SPEED_MIN: 100,   // px/sec tangential speed at difficulty 0
@@ -143,6 +151,8 @@ export const SATELLITE = {
 
 // Worm enemy configuration
 export const WORM = {
+  INTERVAL_MULTIPLIER: 1.2,
+  SPAWNING_PRIORITY: 0.6,
   CIRCLE_RADIUS: 10,
   MIN_SEP: 14,             // min circle center-to-center separation
   MAX_SEP: 32,             // max circle center-to-center separation
@@ -165,6 +175,8 @@ export const WORM = {
 
 // Blaster enemy configuration
 export const BLASTER = {
+  INTERVAL_MULTIPLIER: 2.5,
+  SPAWNING_PRIORITY: 0.1,
   SPIKE_OUTER_RADIUS: 22,  // tip distance from center
   SPIKE_INNER_RADIUS: 12,  // base corner distance from center
   SPIKE_HALF_ANGLE: 0.3,   // radians — half-width of each spike base (~17°)
@@ -192,6 +204,8 @@ export const BLASTER = {
 
 // Bird boss configuration
 export const BIRD_BOSS = {
+  INTERVAL_MULTIPLIER: 1.0, // unused — boss spawner is one-shot
+  SPAWNING_PRIORITY: 0.0,   // unused
   HEALTH: 800,
   COLLISION_DAMAGE: 30,
   CANVAS_SIZE: 80,
@@ -219,6 +233,8 @@ export const BIRD_BOSS = {
 
 // Snake boss configuration
 export const SNAKE_BOSS = {
+  INTERVAL_MULTIPLIER: 1.0, // unused — boss spawner is one-shot
+  SPAWNING_PRIORITY: 0.0,   // unused
   HEAD_HEALTH: 2000,
   SEGMENT_HEALTH: 600,
   SEGMENT_COUNT: 15,
