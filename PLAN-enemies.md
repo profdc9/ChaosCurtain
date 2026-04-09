@@ -168,7 +168,7 @@ Boss enemies differ from regular enemies in the following ways:
 - Health is ~10× that of ordinary enemies (tunable per boss)
 - Each boss has unique movement patterns, geometry, and special traits
 
-### Boss — Bird
+### Boss — Bird ✓ implemented
 - **Geometry:** Two wing pairs (each a V shape) joined at a center-bottom point — left wing V opens lower-left, right wing V opens lower-right; an upward-pointing V connects the tops of both wings forming the head; two small circles inside the upward V as eyes; all line segments yellow, eyes light blue
 - **Animation:** Wings fan inward and outward continuously — flapping motion; faster on dive, slower on retreat
 - **Movement:** Erratic flapping around the room; repeatedly dives swiftly toward the player then pulls back (charge-and-retreat); after colliding with the player, bounces back as if deflected — must reorient before charging again, giving the player a brief damage window
@@ -177,10 +177,18 @@ Boss enemies differ from regular enemies in the following ways:
 - **Health:** ~10× ordinary enemy baseline
 - **Collision damage dealt:** Heavy (to player only)
 - **Destruction:** All line segments and eye circles fly apart individually with burning fragment animation
+- **Implementation notes:**
+  - States: `flit` (erratic movement toward random room targets, charges after 1–2.5s) → `charge` (beelines to player position recorded at charge start) → `retreat` (bounces opposite to charge dir for 0.8s)
+  - `flapPhase` advances at `FLAP_SPEED_FLIT/CHARGE/RETREAT` (3/7/1.5 rad/s); `flapY` = base (6) + amplitude (16) * (0.5 + 0.5 * sin(phase)) drives all wing vertices each frame → `cache: false` canvas
+  - Wing geometry in local space (bird points +x): tail join (-10,0); outer wing tips (-18, ±flapY); inner wing tips (2, ±flapY*0.55); head tip (18,0) — 6 segments + 2 eye circles
+  - `ignoresPlayerRam = true`: PlayerActor skips `other.takeDamage` call; player still takes `collisionDamage` (30) from bird's `collisionDamage` field
+  - On player collision: immediately enters `retreat` state
+  - Health: 800 (≈ 10× Wanderer); point value: 2000
+  - Spawned by one-shot boss spawner; boss room also has wanderer + dart fodder spawners
 
 ---
 
-### Boss — Snake
+### Boss — Snake ✓ implemented
 - **Geometry:** Chain of 15–20 tangent circles (segment count tunable, to be revised once relative sizes are established); head circle contains two small eye circles; entire snake green; each segment independently shifts toward red as its own health depletes — body can show a patchwork of health states
 - **Movement:** Classic snake body-follows-head motion; attempts to encircle the player, slowly tightening a loop to trap them; once a full loop is completed around the player, the head rams toward the player; bounces back on collision (like the Bird) giving the player a brief damage window
 - **Special trait — Segmented health:**
@@ -194,6 +202,16 @@ Boss enemies differ from regular enemies in the following ways:
 - **Health:** Head ~20× ordinary enemy baseline; regular segments ~10×
 - **Collision damage dealt:** Heavy (head only, to player only)
 - **Destruction:** Disintegrating segments each fly apart as individual circles with burning fragment animation; full snake destruction produces a cascade of fragments along the entire length
+- **Implementation notes:**
+  - `SnakeBossActor` (head) + 15 `SnakeSegmentActor` instances registered individually (each counts toward room live-count)
+  - States: `orbit` (circles player at `orbitRadius`, tightening at 12 px/s; transitions to ram after 4–7s or when radius hits 80px) → `ram` (beelines to player position recorded at ram start at 280px/s) → `recoil` (reverse dir for 0.7s)
+  - Body-follows-head: head maintains position history ring buffer (max 400 entries); each segment i reads history at `(i+1) * step` from end where `step = round(SEGMENT_SPACING * 60 / currentSpeed)` — dynamically adapts to speed changes
+  - `speedMult` increases by `SPEED_BOOST_PER_LOSS (0.06)` per dead segment, capped at 2×
+  - When a segment reaches zero health: it and all tail-ward segments cascade die (each emits `enemy:died` with its point value, decrementing live count)
+  - Head death cascades kills all remaining segments
+  - `ignoresPlayerRam = true` on both head and segments; player collision triggers recoil on head
+  - Head: 2000 HP, 3000 pts; segment: 600 HP, 200 pts
+  - Spawned by one-shot boss spawner in the hardest non-exit room; snake boss room also has wanderer + dart fodder
 
 ---
 
