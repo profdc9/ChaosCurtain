@@ -5,7 +5,7 @@ export interface DoorDef {
   targetRoomId: string;
 }
 
-export type SpawnEnemyType = 'wanderer' | 'dart' | 'wrangler' | 'satellite' | 'worm' | 'blaster' | 'bird_boss' | 'snake_boss';
+export type SpawnEnemyType = 'wanderer' | 'dart' | 'wrangler' | 'satellite' | 'worm' | 'blaster' | 'bird_boss' | 'snake_boss' | 'zapsphere_boss' | 'glitch_boss';
 
 export interface SpawnerDef {
   type: SpawnEnemyType;

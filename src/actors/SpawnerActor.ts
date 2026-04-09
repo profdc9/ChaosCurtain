@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { SPAWNER, WANDERER, DART, WRANGLER, SATELLITE, WORM, BLASTER, BIRD_BOSS, SNAKE_BOSS } from '../constants';
+import { SPAWNER, WANDERER, DART, WRANGLER, SATELLITE, WORM, BLASTER, BIRD_BOSS, SNAKE_BOSS, ZAPSPHERE, GLITCH_BOSS } from '../constants';
 import { HealthComponent } from '../components/HealthComponent';
 import { FragmentActor } from './FragmentActor';
 import { GameEvents } from '../utils/GameEvents';
@@ -11,6 +11,8 @@ import { WormActor } from './enemies/WormActor';
 import { BlasterActor } from './enemies/BlasterActor';
 import { BirdBossActor } from './enemies/BirdBossActor';
 import { SnakeBossActor } from './enemies/SnakeBossActor';
+import { ZapsphereActor } from './enemies/ZapsphereActor';
+import { GlitchBossActor } from './enemies/GlitchBossActor';
 import type { SpawnEnemyType } from '../rooms/RoomDef';
 
 export class SpawnerActor extends ex.Actor {
@@ -118,8 +120,10 @@ export class SpawnerActor extends ex.Actor {
         break;
       }
       case 'blaster':   actor = new BlasterActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
-      case 'bird_boss': actor = new BirdBossActor(this.pos.x, this.pos.y, this.player); break;
-      case 'snake_boss':actor = new SnakeBossActor(this.pos.x, this.pos.y, this.player, this.difficulty, this.registerEnemy); break;
+      case 'bird_boss':      actor = new BirdBossActor(this.pos.x, this.pos.y, this.player); break;
+      case 'snake_boss':     actor = new SnakeBossActor(this.pos.x, this.pos.y, this.player, this.difficulty, this.registerEnemy); break;
+      case 'zapsphere_boss': actor = new ZapsphereActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
+      case 'glitch_boss':    actor = new GlitchBossActor(this.pos.x, this.pos.y, this.player); break;
     }
     this.registerEnemy(actor);
   }
@@ -200,6 +204,10 @@ export class SpawnerActor extends ex.Actor {
       this.drawBirdBossPortrait(ctx);
     } else if (this.enemyType === 'snake_boss') {
       this.drawSnakeBossPortrait(ctx);
+    } else if (this.enemyType === 'zapsphere_boss') {
+      this.drawZapsphereBossPortrait(ctx);
+    } else if (this.enemyType === 'glitch_boss') {
+      this.drawGlitchBossPortrait(ctx);
     } else {
       this.drawBlasterPortrait(ctx);
     }
@@ -263,6 +271,26 @@ export class SpawnerActor extends ex.Actor {
     }
   }
 
+  /** Small cyan circle with rotating square inside. */
+  private drawZapsphereBossPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#00ffff';
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#888888';
+    ctx.strokeRect(-5, -5, 10, 10);
+  }
+
+  /** Small white box with arrow inside. */
+  private drawGlitchBossPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.strokeRect(-11, -11, 22, 22);
+    ctx.strokeStyle = '#00ff00';
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(3, -4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(3,  4); ctx.stroke();
+  }
+
   /** Small yellow bird silhouette (V wings + head V). */
   private drawBirdBossPortrait(ctx: CanvasRenderingContext2D): void {
     ctx.strokeStyle = '#ffff00';
@@ -305,8 +333,10 @@ export class SpawnerActor extends ex.Actor {
       case 'satellite': return { intervalMultiplier: SATELLITE.INTERVAL_MULTIPLIER, spawnPriority: SATELLITE.SPAWNING_PRIORITY };
       case 'worm':      return { intervalMultiplier: WORM.INTERVAL_MULTIPLIER,      spawnPriority: WORM.SPAWNING_PRIORITY      };
       case 'blaster':   return { intervalMultiplier: BLASTER.INTERVAL_MULTIPLIER,   spawnPriority: BLASTER.SPAWNING_PRIORITY   };
-      case 'bird_boss': return { intervalMultiplier: BIRD_BOSS.INTERVAL_MULTIPLIER, spawnPriority: BIRD_BOSS.SPAWNING_PRIORITY };
-      case 'snake_boss':return { intervalMultiplier: SNAKE_BOSS.INTERVAL_MULTIPLIER,spawnPriority: SNAKE_BOSS.SPAWNING_PRIORITY};
+      case 'bird_boss':      return { intervalMultiplier: BIRD_BOSS.INTERVAL_MULTIPLIER,  spawnPriority: BIRD_BOSS.SPAWNING_PRIORITY  };
+      case 'snake_boss':     return { intervalMultiplier: SNAKE_BOSS.INTERVAL_MULTIPLIER, spawnPriority: SNAKE_BOSS.SPAWNING_PRIORITY };
+      case 'zapsphere_boss': return { intervalMultiplier: ZAPSPHERE.INTERVAL_MULTIPLIER,  spawnPriority: ZAPSPHERE.SPAWNING_PRIORITY  };
+      case 'glitch_boss':    return { intervalMultiplier: GLITCH_BOSS.INTERVAL_MULTIPLIER,spawnPriority: GLITCH_BOSS.SPAWNING_PRIORITY};
     }
   }
 

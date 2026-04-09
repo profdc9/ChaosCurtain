@@ -202,6 +202,65 @@ export const BLASTER = {
   FRAGMENT_LIFETIME_MAX: 1.0,
 } as const;
 
+// Zapsphere boss configuration
+export const ZAPSPHERE = {
+  INTERVAL_MULTIPLIER: 1.0, // unused — one-shot
+  SPAWNING_PRIORITY: 0.0,
+  HEALTH: 800,
+  COLLISION_DAMAGE: 20,
+  CANVAS_SIZE: 64,
+  COLLIDER_RADIUS: 24,
+  CIRCLE_RADIUS: 24,
+  SQUARE_HALF: 14,            // half-size of rotating inner square
+  DANGER_RADIUS: 180,         // ~7.5× circle radius
+  DWELL_THRESHOLD_EASY: 3.0,  // seconds before lightning at difficulty 0
+  DWELL_THRESHOLD_HARD: 0.8,  // seconds before lightning at difficulty 1
+  LIGHTNING_DAMAGE: 50,
+  LIGHTNING_COOLDOWN: 2.0,    // seconds between lightning shots
+  DRIFT_SPEED: 60,
+  SQUARE_ROT_BASE: 1.2,       // base rad/s for inner square rotation
+  SQUARE_ROT_ACCEL: 3.0,      // multiplier added at full dwell (total = base × (1 + accel × ratio))
+  COLOR_CYCLE_BASE: 1.0,      // color states/s at zero dwell
+  COLOR_CYCLE_ACCEL: 5.0,     // multiplier added at full dwell
+  DAMAGE_MULTIPLIER: 2.5,     // bullet damage multiplier when player is in danger zone
+  COLOR_CIRCLE: '#00ffff',
+  POINT_VALUE: 2500,
+  FRAGMENT_SPEED_MIN: 80,
+  FRAGMENT_SPEED_MAX: 200,
+  FRAGMENT_ANGULAR_VEL_MAX: 5.0,
+  FRAGMENT_LIFETIME_MIN: 0.5,
+  FRAGMENT_LIFETIME_MAX: 1.5,
+} as const;
+
+// GlitchBoss configuration
+export const GLITCH_BOSS = {
+  INTERVAL_MULTIPLIER: 1.0, // unused — one-shot
+  SPAWNING_PRIORITY: 0.0,
+  HEALTH: 800,
+  COLLISION_DAMAGE: 20,
+  CANVAS_SIZE: 60,
+  COLLIDER_RADIUS: 20,
+  BOX_HALF: 20,
+  ARROW_LENGTH: 13,           // center to arrow tip
+  RETREAT_SPEED: 100,         // slower than player (220) so gap can be closed
+  CONE_BASE_HALF: 0.30,       // rad, cone half-angle at max range (narrow)
+  CONE_MAX_HALF: 1.35,        // rad, cone half-angle at close range (wide)
+  CONE_MAX_DIST: 420,         // distance beyond which cone is at minimum angle
+  ARROW_SPEED_MIN: 0.5,       // rad/s
+  ARROW_SPEED_MAX: 1.5,
+  ARROW_CHANGE_MIN: 1.0,      // seconds between random speed changes
+  ARROW_CHANGE_MAX: 3.0,
+  DAMAGE_MIN_SCALE: 0.15,     // bullet damage fraction at max distance
+  DAMAGE_MAX_DIST: 500,       // beyond this, minimum damage applies
+  COLOR_CYCLE_SPEED: 0.5,     // arrow color states per second
+  POINT_VALUE: 3000,
+  FRAGMENT_SPEED_MIN: 80,
+  FRAGMENT_SPEED_MAX: 200,
+  FRAGMENT_ANGULAR_VEL_MAX: 5.0,
+  FRAGMENT_LIFETIME_MIN: 0.5,
+  FRAGMENT_LIFETIME_MAX: 1.5,
+} as const;
+
 // Bird boss configuration
 export const BIRD_BOSS = {
   INTERVAL_MULTIPLIER: 1.0, // unused — boss spawner is one-shot

@@ -10,6 +10,8 @@ export class PlayerActor extends ex.Actor {
   readonly sharedState: SharedPlayerState;
   /** Pull forces applied by active Wrangler tethers. Keys are wrangler actor instances. */
   readonly pullRegistry = new Map<object, ex.Vector>();
+  /** Approach-block directions from active GlitchBoss cones. Value = unit vector toward boss. */
+  readonly glitchRegistry = new Map<object, ex.Vector>();
 
   private readonly input: InputSystem;
   private fireTimer = 0;
@@ -72,6 +74,14 @@ export class PlayerActor extends ex.Actor {
     // Apply wrangler tether pulls
     for (const pull of this.pullRegistry.values()) {
       this.vel = this.vel.add(pull);
+    }
+
+    // Apply GlitchBoss cone constraints — remove any velocity component directed toward a boss
+    for (const towardBoss of this.glitchRegistry.values()) {
+      const dot = this.vel.dot(towardBoss);
+      if (dot > 0) {
+        this.vel = this.vel.sub(towardBoss.scale(dot));
+      }
     }
 
     // Rotation: face aim direction when non-zero, fall back to movement direction

@@ -164,13 +164,19 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
     }
   }
 
-  // Assign snake boss to hardest non-exit room, bird boss to second hardest
+  // Assign bosses to the 4 hardest non-exit rooms, in descending difficulty order:
+  // [0] = hardest (closest to exit) → GlitchBoss
+  // [1] = 2nd hardest              → Zapsphere
+  // [2] = 3rd hardest              → Snake
+  // [3] = 4th hardest              → Bird (first boss player encounters)
   const nonExitIds = [...diffMap.keys()]
     .filter(id => id !== exitRoomId && id !== startRoomId)
     .sort((a, b) => (diffMap.get(b) ?? 0) - (diffMap.get(a) ?? 0));
 
-  const snakeBossRoomId = nonExitIds[0] ?? null;
-  const birdBossRoomId  = nonExitIds[1] ?? null;
+  const glitchBossRoomId    = nonExitIds[0] ?? null;
+  const zapsphereBossRoomId = nonExitIds[1] ?? null;
+  const snakeBossRoomId     = nonExitIds[2] ?? null;
+  const birdBossRoomId      = nonExitIds[3] ?? null;
 
   for (let r = 0; r < gridH; r++) {
     for (let c = 0; c < gridW; c++) {
@@ -190,8 +196,10 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
       }
 
       let bossType: SpawnEnemyType | undefined;
-      if (id === snakeBossRoomId) bossType = 'snake_boss';
-      else if (id === birdBossRoomId) bossType = 'bird_boss';
+      if      (id === glitchBossRoomId)    bossType = 'glitch_boss';
+      else if (id === zapsphereBossRoomId) bossType = 'zapsphere_boss';
+      else if (id === snakeBossRoomId)     bossType = 'snake_boss';
+      else if (id === birdBossRoomId)      bossType = 'bird_boss';
 
       rooms[id] = {
         id,

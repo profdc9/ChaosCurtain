@@ -215,7 +215,7 @@ Boss enemies differ from regular enemies in the following ways:
 
 ---
 
-### Boss — Zapsphere
+### Boss — Zapsphere ✓ implemented
 - **Geometry:** Large circle (cyan outline, not filled) with a rotating square inside (gray outline, not filled); square continuously cycles gray → white → blue → gray; all shapes outlines only — vector display consistent
 - **Movement:** Drifts slowly around the room; actively tends toward clusters of other enemies, using them as cover and forcing the player to clear fodder before getting a clean shot
 - **Special mechanic — Danger zone:**
@@ -227,10 +227,19 @@ Boss enemies differ from regular enemies in the following ways:
 - **Health:** ~10× ordinary enemy baseline
 - **Collision damage dealt:** Medium
 - **Destruction:** Circle and square outlines fly apart individually with burning fragment animation
+- **Implementation notes:**
+  - Canvas `cache: false` — inner square rotates and color changes every frame
+  - `dwellThreshold` lerps `DWELL_THRESHOLD_EASY (3.0s)` → `DWELL_THRESHOLD_HARD (0.8s)` with difficulty
+  - `dwellTimer` increments while player within `DANGER_RADIUS (180px)`; drains at 2× rate outside
+  - Inner square: `squareAngle` advances at `SQUARE_ROT_BASE × (1 + SQUARE_ROT_ACCEL × dwellRatio)` — spins up to 4× faster at full dwell; color snaps through gray/white/blue at similarly accelerating rate
+  - Lightning fires when `dwellTimer >= dwellThreshold` and `lightningCooldown == 0`; uses existing `LightningBoltActor`; 2s cooldown between shots
+  - Bullet damage boost: in `collisionstart`, if player is within `DANGER_RADIUS`, applies `DAMAGE_MULTIPLIER (2.5×)` to bullet damage before passing to `healthComp`
+  - Cluster movement: scans `engine.currentScene.actors` every 0.5s to find centroid of all other live enemies; drifts toward it at `DRIFT_SPEED (60px/s)`; falls back to room-center drift when alone
+  - Placed in 3rd-hardest non-exit room; 800 HP, 2500 pts
 
 ---
 
-### Boss — GlitchBoss *(most difficult; placed closest to exit)*
+### Boss — GlitchBoss ✓ implemented *(most difficult; placed closest to exit)*
 - **Geometry:** Square box (outline only) containing an arrow that can point in any direction; arrow color cycles randomly between green, blue, gray, and white (never red — reserved for damage indication); all outlines only
 - **Animation:** Arrow rotates at a constant slow speed with random direction changes — player cannot predict or time a fixed spin cycle
 - **Movement:** Retreats to maintain distance from the player; moves slower than the player's maximum speed so the gap can be closed, but the glitch mechanic complicates doing so
@@ -246,3 +255,13 @@ Boss enemies differ from regular enemies in the following ways:
 - **Health:** ~10× ordinary enemy baseline
 - **Collision damage dealt:** Medium
 - **Destruction:** Box and arrow fly apart individually with burning fragment animation
+- **Implementation notes:**
+  - Canvas `cache: false` — arrow angle changes every frame
+  - Arrow rotates at `arrowSpeed` (random magnitude `ARROW_SPEED_MIN–MAX`, random sign CW/CCW); speed picks a new random value every `ARROW_CHANGE_MIN–MAX (1–3s)`
+  - Arrow color cycles through green/blue/gray/white (never red) at `COLOR_CYCLE_SPEED (0.5 states/s)`; pulses white and thickens when actively glitching
+  - Retreat: velocity = `normalize(player - boss) × -RETREAT_SPEED (100px/s)` each frame
+  - **Glitch cone**: half-angle = `CONE_BASE_HALF (0.30rad) + (CONE_MAX_HALF (1.35rad) - base) × (1 - dist/CONE_MAX_DIST (420px))`; player is in cone if angle-to-player differs from arrowAngle by less than halfAngle
+  - When in cone: registers `towardBoss` unit vector into `player.glitchRegistry` (new Map on PlayerActor, parallel to `pullRegistry`); PlayerActor zeroes out any velocity component with positive dot product toward boss each frame
+  - When out of cone or boss dies: removes entry from registry
+  - **Proximity damage scaling**: bullet damage × `(DAMAGE_MIN_SCALE + (1-MIN_SCALE) × max(0, 1 - dist/DAMAGE_MAX_DIST (500px)))`; far shots deal 15% damage, point-blank deals 100%
+  - Placed in hardest non-exit room (closest to exit); 800 HP, 3000 pts
