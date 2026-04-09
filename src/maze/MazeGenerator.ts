@@ -1,5 +1,5 @@
 import { SeededRandom } from '../utils/SeededRandom';
-import type { RoomDef, SpawnerDef, DoorSide } from '../rooms/RoomDef';
+import type { RoomDef, SpawnerDef, DoorSide, SpawnEnemyType } from '../rooms/RoomDef';
 import { MAZE_GEN } from '../constants';
 
 export interface MazeResult {
@@ -50,9 +50,17 @@ function bfsDistances(
  * Build spawner machine definitions for a room based on difficulty (0 = easy, 1 = hardest).
  * Easy rooms get only wanderer machines; harder rooms mix in dart machines.
  */
-function buildSpawners(difficulty: number, rng: SeededRandom): SpawnerDef[] {
+function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEnemyType): SpawnerDef[] {
   const { EASY_TIER, MED_TIER } = MAZE_GEN;
   const result: SpawnerDef[] = [];
+
+  if (bossType) {
+    // Boss room: boss spawner (one-shot) + fodder spawners
+    result.push({ type: bossType, count: 1, oneShot: true });
+    result.push({ type: 'wanderer', count: 1 });
+    if (difficulty >= 0.5) result.push({ type: 'dart', count: 1 });
+    return result;
+  }
 
   if (difficulty < EASY_TIER) {
     result.push({ type: 'wanderer', count: rng.nextInt(1, 2) });
@@ -146,11 +154,28 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
   // ── 5. Build RoomDefs ────────────────────────────────────────────────────────
   const rooms: Record<string, RoomDef> = {};
 
+  // Pre-compute difficulties to assign boss rooms
+  const diffMap = new Map<string, number>();
   for (let r = 0; r < gridH; r++) {
     for (let c = 0; c < gridW; c++) {
       const id = cellId(c, r);
-      const dFromExit  = distFromExit.get(id) ?? 0;
-      const difficulty = maxDistFromExit > 0 ? 1 - dFromExit / maxDistFromExit : 0;
+      const dFromExit = distFromExit.get(id) ?? 0;
+      diffMap.set(id, maxDistFromExit > 0 ? 1 - dFromExit / maxDistFromExit : 0);
+    }
+  }
+
+  // Assign snake boss to hardest non-exit room, bird boss to second hardest
+  const nonExitIds = [...diffMap.keys()]
+    .filter(id => id !== exitRoomId && id !== startRoomId)
+    .sort((a, b) => (diffMap.get(b) ?? 0) - (diffMap.get(a) ?? 0));
+
+  const snakeBossRoomId = nonExitIds[0] ?? null;
+  const birdBossRoomId  = nonExitIds[1] ?? null;
+
+  for (let r = 0; r < gridH; r++) {
+    for (let c = 0; c < gridW; c++) {
+      const id         = cellId(c, r);
+      const difficulty = diffMap.get(id) ?? 0;
       const isExit     = id === exitRoomId;
 
       const doors = [];
@@ -164,10 +189,14 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
         }
       }
 
+      let bossType: SpawnEnemyType | undefined;
+      if (id === snakeBossRoomId) bossType = 'snake_boss';
+      else if (id === birdBossRoomId) bossType = 'bird_boss';
+
       rooms[id] = {
         id,
         doors,
-        spawners: isExit ? [] : buildSpawners(difficulty, rng),
+        spawners: isExit ? [] : buildSpawners(difficulty, rng, bossType),
         difficulty,
         isExit,
       };

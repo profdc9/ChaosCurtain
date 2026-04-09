@@ -9,6 +9,8 @@ import { WranglerActor } from './enemies/WranglerActor';
 import { SatelliteActor } from './enemies/SatelliteActor';
 import { WormActor } from './enemies/WormActor';
 import { BlasterActor } from './enemies/BlasterActor';
+import { BirdBossActor } from './enemies/BirdBossActor';
+import { SnakeBossActor } from './enemies/SnakeBossActor';
 import type { SpawnEnemyType } from '../rooms/RoomDef';
 
 export class SpawnerActor extends ex.Actor {
@@ -23,6 +25,7 @@ export class SpawnerActor extends ex.Actor {
   private readonly getLiveCount: () => number;
   private readonly spawnInterval: number;
   private readonly difficulty: number;
+  private readonly oneShot: boolean;
   private spawnTimer: number;
   private currentColor = '#ffffff';
   private readonly spawnerCanvas: ex.Canvas;
@@ -36,12 +39,15 @@ export class SpawnerActor extends ex.Actor {
     player: ex.Actor,
     registerEnemy: (actor: ex.Actor) => void,
     getLiveCount: () => number,
+    oneShot = false,
   ) {
     super({ pos: ex.vec(x, y), collisionType: ex.CollisionType.Active });
 
     this.enemyType = enemyType;
     this.spawnInterval = spawnInterval;
-    this.spawnTimer = spawnInterval * SPAWNER.INITIAL_DELAY_FACTOR;
+    this.oneShot = oneShot;
+    // One-shot spawners fire immediately (timer = 0); others fire after half-interval
+    this.spawnTimer = oneShot ? 0 : spawnInterval * SPAWNER.INITIAL_DELAY_FACTOR;
     this.difficulty = difficulty;
     this.player = player;
     this.registerEnemy = registerEnemy;
@@ -80,11 +86,17 @@ export class SpawnerActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (this.spawnTimer === Infinity) return;
     this.spawnTimer -= delta / 1000;
     if (this.spawnTimer <= 0) {
-      this.spawnTimer = this.spawnInterval;
-      if (this.getLiveCount() < SPAWNER.MAX_LIVE_ENEMIES) {
+      if (this.oneShot) {
+        this.spawnTimer = Infinity; // fire once then go idle
         this.spawnEnemy();
+      } else {
+        this.spawnTimer = this.spawnInterval;
+        if (this.getLiveCount() < SPAWNER.MAX_LIVE_ENEMIES) {
+          this.spawnEnemy();
+        }
       }
     }
   }
@@ -101,7 +113,9 @@ export class SpawnerActor extends ex.Actor {
         actor = new WormActor(this.pos.x, this.pos.y, this.player, WORM.HEALTH, splitsLeft, this.registerEnemy);
         break;
       }
-      case 'blaster': actor = new BlasterActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
+      case 'blaster':   actor = new BlasterActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
+      case 'bird_boss': actor = new BirdBossActor(this.pos.x, this.pos.y, this.player); break;
+      case 'snake_boss':actor = new SnakeBossActor(this.pos.x, this.pos.y, this.player, this.difficulty, this.registerEnemy); break;
     }
     this.registerEnemy(actor);
   }
@@ -178,6 +192,10 @@ export class SpawnerActor extends ex.Actor {
       this.drawSatellitePortrait(ctx);
     } else if (this.enemyType === 'worm') {
       this.drawWormPortrait(ctx);
+    } else if (this.enemyType === 'bird_boss') {
+      this.drawBirdBossPortrait(ctx);
+    } else if (this.enemyType === 'snake_boss') {
+      this.drawSnakeBossPortrait(ctx);
     } else {
       this.drawBlasterPortrait(ctx);
     }
@@ -237,6 +255,27 @@ export class SpawnerActor extends ex.Actor {
     for (const x of [-10, 10]) {
       ctx.beginPath();
       ctx.arc(x, 0, 5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  /** Small yellow bird silhouette (V wings + head V). */
+  private drawBirdBossPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 1.5;
+    // Wings (V shape)
+    ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(0, -8); ctx.lineTo(12, 0); ctx.stroke();
+    // Head V
+    ctx.beginPath(); ctx.moveTo(-4, -4); ctx.lineTo(0, -12); ctx.lineTo(4, -4); ctx.stroke();
+  }
+
+  /** Small green chain of circles. */
+  private drawSnakeBossPortrait(ctx: CanvasRenderingContext2D): void {
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(-12 + i * 8, 2, 4, 0, Math.PI * 2);
       ctx.stroke();
     }
   }

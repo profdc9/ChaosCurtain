@@ -47,10 +47,13 @@ export class PlayerActor extends ex.Actor {
         isEnemy?: boolean;
         collisionDamage?: number;
         takeDamage?: (n: number) => void;
+        ignoresPlayerRam?: boolean;
       };
       if (other.isEnemy) {
         this.sharedState.applyDamage(other.collisionDamage ?? 0);
-        other.takeDamage?.(PLAYER.COLLISION_DAMAGE_TO_ENEMY);
+        if (!other.ignoresPlayerRam) {
+          other.takeDamage?.(PLAYER.COLLISION_DAMAGE_TO_ENEMY);
+        }
       }
     });
   }

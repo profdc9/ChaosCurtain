@@ -190,6 +190,70 @@ export const BLASTER = {
   FRAGMENT_LIFETIME_MAX: 1.0,
 } as const;
 
+// Bird boss configuration
+export const BIRD_BOSS = {
+  HEALTH: 800,
+  COLLISION_DAMAGE: 30,
+  CANVAS_SIZE: 80,
+  COLLIDER_RADIUS: 20,
+  FLIT_SPEED: 120,
+  CHARGE_SPEED: 320,
+  RETREAT_SPEED: 180,
+  FLIT_DURATION_MIN: 1.0,
+  FLIT_DURATION_MAX: 2.5,
+  RETREAT_DURATION: 0.8,
+  FLAP_BASE: 6,           // min y-offset of wing tips (canvas local units)
+  FLAP_AMPLITUDE: 16,     // additional y-offset range
+  FLAP_SPEED_FLIT: 3.0,   // rad/sec phase advance while flitting
+  FLAP_SPEED_CHARGE: 7.0, // rad/sec while charging
+  FLAP_SPEED_RETREAT: 1.5,// rad/sec while retreating
+  COLOR_WINGS: '#ffff00',
+  COLOR_EYES: '#add8e6',
+  POINT_VALUE: 2000,
+  FRAGMENT_SPEED_MIN: 80,
+  FRAGMENT_SPEED_MAX: 200,
+  FRAGMENT_ANGULAR_VEL_MAX: 6.0,
+  FRAGMENT_LIFETIME_MIN: 0.5,
+  FRAGMENT_LIFETIME_MAX: 1.5,
+} as const;
+
+// Snake boss configuration
+export const SNAKE_BOSS = {
+  HEAD_HEALTH: 2000,
+  SEGMENT_HEALTH: 600,
+  SEGMENT_COUNT: 15,
+  SEGMENT_SPACING: 26,       // px between consecutive segment centers along path
+  HEAD_RADIUS: 14,
+  SEGMENT_RADIUS: 10,
+  EYE_RADIUS: 3,
+  EYE_OFFSET: 6,
+  ORBIT_SPEED: 100,          // px/sec tangential speed during orbit
+  ORBIT_RADIUS: 200,         // starting orbit radius
+  ORBIT_TIGHTEN_RATE: 12,    // px/sec reduction in orbit radius while orbiting
+  ORBIT_MIN_RADIUS: 80,      // orbit radius at which it transitions to ram
+  ORBIT_DURATION_MIN: 4.0,
+  ORBIT_DURATION_MAX: 7.0,
+  RAM_SPEED: 280,
+  RECOIL_SPEED: 140,
+  RECOIL_DURATION: 0.7,
+  SPEED_BOOST_PER_LOSS: 0.06, // speed multiplier added per segment lost
+  MAX_SPEED_MULTIPLIER: 2.0,
+  COLLISION_DAMAGE: 40,
+  CANVAS_SIZE_HEAD: 40,
+  CANVAS_SIZE_SEGMENT: 28,
+  COLLIDER_RADIUS_HEAD: 14,
+  COLLIDER_RADIUS_SEGMENT: 10,
+  COLOR_BODY: '#00ff00',
+  COLOR_DEAD: '#ff0000',
+  POINT_VALUE_HEAD: 3000,
+  POINT_VALUE_SEGMENT: 200,
+  FRAGMENT_SPEED_MIN: 80,
+  FRAGMENT_SPEED_MAX: 180,
+  FRAGMENT_ANGULAR_VEL_MAX: 5.0,
+  FRAGMENT_LIFETIME_MIN: 0.5,
+  FRAGMENT_LIFETIME_MAX: 1.3,
+} as const;
+
 // Input configuration
 export const INPUT = {
   GAMEPAD_DEADZONE: 0.15,       // radial deadzone applied to both sticks
