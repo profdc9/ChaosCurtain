@@ -49,19 +49,35 @@
 - Enemies are no longer pre-placed in rooms; all enemies emerge from machines
 
 ### Regular Spawners ✓ implemented
-- Spawn one enemy every N seconds (N = `lerp(SPAWN_INTERVAL_SLOW=6s, SPAWN_INTERVAL_FAST=1.5s, difficulty)`)
-- First spawn fires at `interval × INITIAL_DELAY_FACTOR` (0.5) so rooms feel active immediately
+- Base interval: `lerp(SPAWN_INTERVAL_SLOW=6s, SPAWN_INTERVAL_FAST=1.5s, difficulty)`
+- Each enemy type has its own `INTERVAL_MULTIPLIER` applied on top: `spawnInterval = base × multiplier`
+  - Wanderer 1.0×, Worm 1.2×, Dart 1.5×, Satellite 1.5×, Wrangler 2.0×, Blaster 2.5×
+- First spawn fires at `spawnInterval × INITIAL_DELAY_FACTOR (0.5)` so rooms feel active immediately
 - Multiple may appear in a single room; count and enemy type distribution scale with difficulty
 
-### Boss Spawners
-- Spawn exactly one boss enemy when the player enters the room, then sit idle
-- A room may contain both a boss spawner and regular spawners simultaneously — deferred (bosses not yet implemented)
+#### Spawn throttle near cap
+- `MAX_LIVE_ENEMIES = 20` is a soft target, not a hard cutoff
+- When a spawner's timer fires, a probabilistic check gates the spawn:
+  `threshold = liveCount × SPAWNING_PRIORITY / MAX_LIVE_ENEMIES`
+  Spawn succeeds if `random() > threshold`
+- Each type has its own `SPAWNING_PRIORITY`:
+  - Wanderer 0.8, Worm 0.6, Satellite 0.35, Dart 0.4, Wrangler 0.2, Blaster 0.1
+- Higher priority = more aggressively throttled as count rises (weaker enemies yield slots)
+- Lower priority = pushes through even at high counts (harder enemies maintain spawn rate)
+- Effect: as the room fills, composition shifts toward harder enemy types; player cannot exploit
+  the cap by keeping weak enemies alive to block dangerous spawns
+
+### Boss Spawners ✓ implemented
+- `oneShot = true`: timer initialised to 0 (fires immediately on room entry), then set to `Infinity`
+- A boss room contains one boss spawner + 1–2 regular fodder spawners
+- Snake boss assigned to the hardest non-exit room; Bird boss to second hardest
 
 ### Visual Design ✓ implemented
 - Box (40×40) drawn with a heavy line: white when at full health, shifts to red as damaged
 - Box contains a miniature portrait of the enemy type it spawns:
-  - Wanderer spawner: small gray square
-  - Dart spawner: small cyan chevron
+  - Wanderer: small gray square; Dart: small cyan chevron; Wrangler: green circle + yellow satellites
+  - Satellite: blue circle + gray spokes; Worm: brown circles + yellow line; Blaster: 5 spike lines
+  - Bird boss: yellow V-wings + head V; Snake boss: chain of green circles
 - Subject to the same scale pulse hit feedback as enemies
 - On destruction: 4 box-side segments fly apart with the burning fragment animation; emits `enemy:died`
 
