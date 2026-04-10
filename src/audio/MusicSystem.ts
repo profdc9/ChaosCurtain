@@ -52,6 +52,7 @@ export class MusicSystem {
   }
 
   stop(): void {
+    if (this.parts.length === 0 && this.synths.length === 0) return;
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
     for (const part  of this.parts)  part.dispose();

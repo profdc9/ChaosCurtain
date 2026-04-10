@@ -23,10 +23,8 @@ export class AudioManager {
   static get sfxVol():   Tone.Volume { return this._sfxVol;   }
   static get isUnlocked(): boolean   { return this._unlocked; }
 
-  /** Must be called from a user-gesture handler (keydown, pointerdown). */
-  static async unlock(): Promise<void> {
-    if (this._unlocked) return;
-    await Tone.start();
+  /** Call after Tone.start() succeeds to enable SFX scheduling. */
+  static markUnlocked(): void {
     this._unlocked = true;
   }
 

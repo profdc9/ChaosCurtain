@@ -10,6 +10,7 @@ import { PickupActor } from '../actors/PickupActor';
 import { MAZE, START_ROOM_ID } from '../rooms/MazeGraph';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
+import * as Tone from 'tone';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicSystem } from '../audio/MusicSystem';
 import { SfxSystem } from '../audio/SfxSystem';
@@ -28,13 +29,21 @@ export class GameplayScene extends ex.Scene {
     this.musicSystem = new MusicSystem();
     new SfxSystem(); // subscribes to GameEvents; no reference needed after construction
 
-    const unlockAudio = () => {
-      void AudioManager.unlock().then(() => this.musicSystem.startPending());
-      window.removeEventListener('keydown',      unlockAudio);
-      window.removeEventListener('pointerdown',  unlockAudio);
+    // Unlock the Web Audio context on the first user gesture.
+    // Tone.start() must be called synchronously inside the event handler.
+    // Using { once: true } on document ensures we catch the event regardless
+    // of which element has focus. Errors are logged rather than swallowed.
+    const unlockAudio = async () => {
+      try {
+        await Tone.start();
+        AudioManager.markUnlocked();
+        await this.musicSystem.startPending();
+      } catch (err) {
+        console.error('[Audio] Failed to start AudioContext:', err);
+      }
     };
-    window.addEventListener('keydown',     unlockAudio, { once: false });
-    window.addEventListener('pointerdown', unlockAudio, { once: false });
+    document.addEventListener('keydown',     unlockAudio, { once: true });
+    document.addEventListener('pointerdown', unlockAudio, { once: true });
 
     // Apply debug starting upgrades
     this.applyDebugUpgrades();
