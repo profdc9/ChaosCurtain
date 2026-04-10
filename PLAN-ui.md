@@ -13,7 +13,33 @@
 
 ---
 
-## Main Menu
+## Start Screen — Implemented
+
+- Full-screen overlay (`src/ui/StartScreenOverlay.ts`) rendered at z=1000 above all game actors
+- Title "CHAOS CURTAIN" in `ROOM.WALL_LINE_COLOR` (light blue) at size 72 via `StrokeFont`
+- Prompt "PRESS ANY KEY OR CLICK TO START" in white at size 28
+- First `keydown` or `pointerdown` on `document` dismisses the overlay and unlocks Web Audio simultaneously
+- Note: gamepad button presses do not satisfy browser autoplay policy — keyboard/mouse required once before gamepad play
+
+---
+
+## Pickup Spawning — Implemented
+
+- Test pickups removed from scene; pickups now spawn dynamically during gameplay
+- Timer fires every 60–120 seconds (randomised per interval) in `GameplayScene.onPreUpdate`
+- Spawn position: random interior point with 80 px margin from room walls
+- Type selection: equal-weight random draw from the pool of types the player still needs:
+  - `health` — only if below max health
+  - `shooterType` — only if below level 3
+  - `weaponPower` — only if below `UPGRADE.MAX_WEAPON_POWER`
+  - `shield` — only if below `UPGRADE.MAX_SHIELD_LEVEL`
+  - `panicButton` — only if below `UPGRADE.MAX_PANIC_COUNT`
+  - `extraLife` — always included
+- Pickups persist in the scene until collected (not tied to room transitions)
+
+---
+
+## Main Menu (planned)
 
 - Start Game
 - Choose Number of Players (1 or 2)

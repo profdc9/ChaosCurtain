@@ -11,7 +11,7 @@ export class SfxSystem {
   // ── Voices ──────────────────────────────────────────────────────────────────
   private readonly shoot: Tone.Synth;
   private readonly hitLight: Tone.Synth;
-  private readonly hitHeavy: Tone.PolySynth;
+  private readonly hitHeavy: Tone.PolySynth<Tone.MetalSynth>;
   private readonly enemyDie: Tone.Synth;
   private readonly bossDie: Tone.PolySynth;
   private readonly playerHit: Tone.MembraneSynth;

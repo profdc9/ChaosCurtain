@@ -3,34 +3,44 @@
 ## Technology
 
 - **Tone.js** for all synthesis — chiptune aesthetic using square/sawtooth oscillators and noise
-- **`@tonejs/midi`** for MIDI parsing and playback
-- Square and sawtooth wave oscillators via Tone.js `Synth` and `FMSynth`
-- LFSR or LCG noise implemented in a custom `AudioWorkletNode`
-- Background music sourced from free/public domain MIDI files (techno with a beat); user will source these
-- Music volume ducks (smoothly fades down and back up) when intense sound effects play
+- Square and sawtooth wave oscillators via Tone.js `Synth`, `PolySynth`, `MetalSynth`, `MembraneSynth`, `NoiseSynth`
+- `AudioManager` owns two master `Tone.Volume` nodes: `musicVol` and `sfxVol` (independently adjustable)
+- Audio context unlocked on first user gesture (keydown / pointerdown) via `Tone.start()` — browser autoplay policy
+
+### Background Music — Status: Deferred
+
+- MIDI playback via `Tone.Transport` + `PolySynth` was implemented and archived on branch **`chiptune-music`**
+- Root cause of choppiness: some MIDI tracks require up to 8 simultaneous voices and Tone.js `PolySynth` voice scheduling degrades under sustained polyphony load — not resolved
+- Music playback is currently disabled; `SfxSystem` (below) remains active
+- Future options: pre-render MIDI to OGG/MP3 and play via `Tone.Player`, or revisit polyphony management
 
 ---
 
-## Sound Effects
+## Sound Effects — Implemented (`src/audio/SfxSystem.ts`)
 
-| Event | Sound |
-|---|---|
-| Bullet fired | Brief high chirp — short square wave pulse |
-| Enemy hit | Bass note + burst of LFSR noise (synced with scale pulse) |
-| Enemy destroyed | Descending noise burst — longer than hit sound |
-| Player hit | Distinct bass hit — lower/heavier than enemy hit |
-| Enemy spawn | Brief noise burst — short, percussive |
-| Door opens | Rising buzz — short sawtooth sweep upward |
-| Door closes | Falling buzz — sawtooth sweep downward |
-| Upgrade collected | Bright ascending bleep — short square wave arpeggio |
-| Room cleared | Brief fanfare — a few ascending notes |
-| Panic button deployed | Full noise burst — wide, impactful |
-| Blaster lightning | Sharp crackling noise burst |
-| Wrangler tether active | Continuous low hum while tethered — fades on tether break |
-| Zapsphere danger zone | Rising pitch warning tone as dwell timer counts down |
-| GlitchBoss glitching | Stuttering/glitchy noise |
-| Fleet ship lost | Descending ominous tone |
-| Game over | Slow descending sequence |
+All voices routed through `AudioManager.sfxVol`. Per-voice time cursor prevents same-frame double-triggers on monophonic synths.
+
+| Event | Voice | Sound |
+|---|---|---|
+| `bullet:fired` | `Tone.Synth` (square) | C6→C3 downchirp over 80 ms (exponential ramp), −18 dB |
+| `enemy:hit` light | `Tone.Synth` (sawtooth) | Pitch scaled with damage magnitude |
+| `enemy:hit` heavy | `PolySynth<MetalSynth>` | Short metallic clang; PolySynth wrapper survives rapid panic-button bursts |
+| `enemy:died` regular | `Tone.Synth` (square) | 3-note descending chirp: A4→E4→A3 |
+| `enemy:died` boss (≥2000 pts) | `Tone.PolySynth` | Two chord hits: Am → Gm |
+| `player:hit` | `Tone.MembraneSynth` | Low bass thud at C1 |
+| `player:upgraded` | `Tone.Synth` (triangle) | Ascending arpeggio: C5 E5 G5 C6 |
+| `player:downgraded` | `Tone.Synth` (triangle) | Descending arpeggio: C6 G5 E5 C5 |
+| `panic:deployed` | `Tone.NoiseSynth` | White noise burst |
+| `pickup:collected` | `Tone.Synth` (triangle) | Two-note chime: C6 → E6 |
+| `zapsphere:lightning` | `Tone.MetalSynth` | High crackling burst at 400 Hz |
+
+### Unimplemented SFX (planned)
+- Door open/close tones
+- Enemy spawn burst
+- Room cleared fanfare
+- Fleet ship lost / game over sequences
+- Wrangler tether hum
+- Zapsphere proximity warning
 
 ---
 

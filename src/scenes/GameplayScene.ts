@@ -1,33 +1,55 @@
 import * as ex from 'excalibur';
-import { UPGRADE } from '../constants';
+import { UPGRADE, ROOM } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { PlayerActor } from '../actors/PlayerActor';
 import { HUD } from '../ui/HUD';
 import { DebugOverlay } from '../ui/DebugOverlay';
+import { StartScreenOverlay } from '../ui/StartScreenOverlay';
 import { GameEvents } from '../utils/GameEvents';
 import { RoomManager } from '../rooms/RoomManager';
 import { PickupActor } from '../actors/PickupActor';
 import { MAZE, START_ROOM_ID } from '../rooms/MazeGraph';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
+import type { PickupType } from '../types/GameTypes';
 import * as Tone from 'tone';
 import { AudioManager } from '../audio/AudioManager';
 import { SfxSystem } from '../audio/SfxSystem';
 
+/** Seconds between pickup spawns (randomised each time). */
+const PICKUP_INTERVAL_MIN = 60;
+const PICKUP_INTERVAL_MAX = 120;
+
+/** Margin from room walls when choosing a random spawn position. */
+const PICKUP_SPAWN_MARGIN = 80;
+
 export class GameplayScene extends ex.Scene {
   private sharedState!: SharedPlayerState;
   private roomManager!: RoomManager;
+  private startOverlay!: StartScreenOverlay;
+
+  // ── Pickup spawn timer ─────────────────────────────────────────────────────
+  private pickupTimer    = 0;
+  private pickupInterval = GameplayScene.randomPickupInterval();
+
+  private static randomPickupInterval(): number {
+    return PICKUP_INTERVAL_MIN + Math.random() * (PICKUP_INTERVAL_MAX - PICKUP_INTERVAL_MIN);
+  }
+
   onInitialize(engine: ex.Engine): void {
     this.sharedState = new SharedPlayerState();
 
-    // Audio — init volume nodes, wire up SFX listeners, pre-fetch gameplay track.
-    // Actual playback starts on the first user gesture (browser autoplay policy).
+    // ── Audio ────────────────────────────────────────────────────────────────
     AudioManager.init();
-    new SfxSystem(); // subscribes to GameEvents; no reference needed after construction
+    new SfxSystem();
 
-    // Unlock the Web Audio context on the first user gesture.
-    // Tone.start() must be called synchronously inside the event handler.
-    const unlockAudio = async () => {
+    // ── Start-screen overlay ─────────────────────────────────────────────────
+    this.startOverlay = new StartScreenOverlay();
+    this.add(this.startOverlay);
+
+    // First user gesture: unlock Web Audio AND dismiss the start screen.
+    const onStart = async () => {
+      this.startOverlay.dismiss();
       try {
         await Tone.start();
         AudioManager.markUnlocked();
@@ -35,13 +57,12 @@ export class GameplayScene extends ex.Scene {
         console.error('[Audio] Failed to start AudioContext:', err);
       }
     };
-    document.addEventListener('keydown',     unlockAudio, { once: true });
-    document.addEventListener('pointerdown', unlockAudio, { once: true });
+    document.addEventListener('keydown',     onStart, { once: true });
+    document.addEventListener('pointerdown', onStart, { once: true });
 
-    // Apply debug starting upgrades
+    // ── Game objects ─────────────────────────────────────────────────────────
     this.applyDebugUpgrades();
 
-    // Global score tracking
     GameEvents.on('enemy:died', (evt) => {
       this.sharedState.addScore(evt.points);
     });
@@ -53,24 +74,53 @@ export class GameplayScene extends ex.Scene {
     this.add(hud);
 
     this.roomManager = new RoomManager(this, player);
+    this.roomManager.load(this.buildStartRoom(MAZE[START_ROOM_ID]), null);
 
-    const startRoom = this.buildStartRoom(MAZE[START_ROOM_ID]);
-    this.roomManager.load(startRoom, null);
-
-    const overlay = new DebugOverlay(this.sharedState, this.roomManager);
-    this.add(overlay);
-
-    // TEST PICKUPS — one of each type for system verification
-    // These will be replaced by RoomManager / DebugConfig placement
-    this.add(new PickupActor(300, 200, 'shooterType'));
-    this.add(new PickupActor(450, 200, 'weaponPower'));
-    this.add(new PickupActor(600, 200, 'shield'));
-    this.add(new PickupActor(750, 200, 'panicButton'));
-    this.add(new PickupActor(900, 200, 'health'));
-    this.add(new PickupActor(1050, 200, 'extraLife'));
+    this.add(new DebugOverlay(this.sharedState, this.roomManager));
   }
 
-  /** Apply DebugConfig overrides to starting upgrade state. */
+  onPreUpdate(_engine: ex.Engine, delta: number): void {
+    this.pickupTimer += delta / 1000;
+    if (this.pickupTimer >= this.pickupInterval) {
+      this.pickupTimer    = 0;
+      this.pickupInterval = GameplayScene.randomPickupInterval();
+      this.spawnPickup();
+    }
+  }
+
+  // ── Pickup spawning ────────────────────────────────────────────────────────
+
+  private spawnPickup(): void {
+    const type = this.selectPickupType();
+    if (type === null) return;
+    const x = ROOM.INNER_LEFT  + PICKUP_SPAWN_MARGIN +
+              Math.random() * (ROOM.INNER_RIGHT - ROOM.INNER_LEFT  - 2 * PICKUP_SPAWN_MARGIN);
+    const y = ROOM.INNER_TOP   + PICKUP_SPAWN_MARGIN +
+              Math.random() * (ROOM.INNER_BOTTOM - ROOM.INNER_TOP  - 2 * PICKUP_SPAWN_MARGIN);
+    this.add(new PickupActor(x, y, type));
+  }
+
+  /**
+   * Returns a pickup type the player actually needs, weighted equally among
+   * all applicable options. Returns null only if everything is maxed (very
+   * unlikely — extraLife is always a candidate).
+   */
+  private selectPickupType(): PickupType | null {
+    const s = this.sharedState;
+    const candidates: PickupType[] = [];
+
+    if (s.health < s.maxHealth)                       candidates.push('health');
+    if (s.shooterType < 3)                            candidates.push('shooterType');
+    if (s.weaponPower < UPGRADE.MAX_WEAPON_POWER)     candidates.push('weaponPower');
+    if (s.shieldLevel < UPGRADE.MAX_SHIELD_LEVEL)     candidates.push('shield');
+    if (s.panicCount  < UPGRADE.MAX_PANIC_COUNT)      candidates.push('panicButton');
+    candidates.push('extraLife'); // lives are always useful
+
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  // ── Debug helpers ──────────────────────────────────────────────────────────
+
   private applyDebugUpgrades(): void {
     const s = this.sharedState;
     const d = DebugConfig;
@@ -81,7 +131,6 @@ export class GameplayScene extends ex.Scene {
     if (d.startMaxUpgrades) {
       s.shooterType = 3;
       s.weaponPower = UPGRADE.MAX_WEAPON_POWER;
-      // Shield: apply level-by-level so charge initialises correctly per level
       for (let i = 0; i < UPGRADE.MAX_SHIELD_LEVEL; i++) s.applyUpgrade('shield');
       s.panicCount = UPGRADE.MAX_PANIC_COUNT;
       return;
@@ -97,17 +146,13 @@ export class GameplayScene extends ex.Scene {
     if (d.startPanicCount !== undefined) s.panicCount = Math.min(d.startPanicCount, UPGRADE.MAX_PANIC_COUNT);
   }
 
-  /**
-   * Return a (possibly modified) RoomDef for the starting room,
-   * substituting DebugConfig overrides for difficulty and spawners.
-   */
   private buildStartRoom(base: RoomDef): RoomDef {
     const d = DebugConfig;
     if (d.roomDifficulty === undefined && d.forcedSpawners === undefined) return base;
     return {
       ...base,
       difficulty: d.roomDifficulty ?? base.difficulty,
-      spawners: d.forcedSpawners ?? base.spawners,
+      spawners:   d.forcedSpawners  ?? base.spawners,
     };
   }
 }
