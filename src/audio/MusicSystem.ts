@@ -24,7 +24,7 @@ interface NoteEvent {
 
 export class MusicSystem {
   private parts:        Tone.Part<NoteEvent>[] = [];
-  private synths:       Tone.Synth[]           = [];
+  private synths:       Tone.PolySynth[]       = [];
   private currentTrack: TrackName | null       = null;
   private readonly midiCache = new Map<TrackName, Midi>();
 
@@ -87,15 +87,19 @@ export class MusicSystem {
       const avgMidi = track.notes.reduce((s, n) => s + n.midi, 0) / track.notes.length;
       const isBass  = avgMidi < 55;
 
-      // Monophonic Synth per track — one oscillator, no voice accumulation.
-      // Overlapping MIDI notes steal the previous note (authentic chiptune behaviour).
-      const synth = new Tone.Synth({
+      // PolySynth with 2 voices per track: each note gets its own oscillator so
+      // simultaneous notes (common in MIDI) don't hit the "start time must be
+      // strictly greater" assertion on a shared oscillator. The fixed pool of 2
+      // prevents the unbounded voice accumulation that caused the original
+      // degradation with unlimited polyphony.
+      const synth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: isBass ? 'sawtooth' as const : 'square' as const },
         envelope:   isBass
           ? { attack: 0.01, decay: 0.1,  sustain: 0.3, release: 0.1  }
           : { attack: 0.01, decay: 0.05, sustain: 0.5, release: 0.05 },
-        volume: SYNTH_VOLUME_DB,
       }).connect(AudioManager.musicVol);
+      synth.maxPolyphony = 2;
+      synth.volume.value = SYNTH_VOLUME_DB;
 
       const events: NoteEvent[] = track.notes
         .filter(n => n.duration > 0)
