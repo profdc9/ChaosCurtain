@@ -14,7 +14,6 @@ import type { RoomDef } from '../rooms/RoomDef';
 import type { PickupType } from '../types/GameTypes';
 import * as Tone from 'tone';
 import { AudioManager } from '../audio/AudioManager';
-import { SfxSystem } from '../audio/SfxSystem';
 
 /** Seconds between pickup spawns (randomised each time). */
 const PICKUP_INTERVAL_MIN = 60;
@@ -40,8 +39,9 @@ export class GameplayScene extends ex.Scene {
     this.sharedState = new SharedPlayerState();
 
     // ── Audio ────────────────────────────────────────────────────────────────
+    // SfxSystem disabled — Tone.js produces persistent stuttering under game load.
+    // See SfxSystem.ts for the full implementation (same situation as chiptune-music branch).
     AudioManager.init();
-    new SfxSystem();
 
     // ── Start-screen overlay ─────────────────────────────────────────────────
     this.startOverlay = new StartScreenOverlay();

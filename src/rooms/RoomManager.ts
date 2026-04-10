@@ -276,6 +276,7 @@ export class RoomManager {
 
   private unlockDoors(): void {
     this.clearedRooms.add(this._currentRoomId);
+    GameEvents.emit('room:cleared', {});
     for (const door of this.doors) {
       door.unlock();
     }

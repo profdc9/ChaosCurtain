@@ -71,6 +71,17 @@ export class SharedPlayerState {
     GameEvents.emit('health:changed', { current: this.health, max: this.maxHealth });
     GameEvents.emit('player:hit', { damage: postShield });
 
+    if (this.health <= 0) {
+      this.fleet = Math.max(0, this.fleet - 1);
+      if (this.fleet > 0) {
+        this.health = this.maxHealth;
+        GameEvents.emit('health:changed', { current: this.health, max: this.maxHealth });
+        GameEvents.emit('fleet:lost', {});
+      } else {
+        GameEvents.emit('game:over', {});
+      }
+    }
+
     if (postShield > DAMAGE.UPGRADE_LOSS_THRESHOLD) {
       this.loseRandomUpgrade();
     }

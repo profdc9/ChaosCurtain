@@ -17,6 +17,10 @@ export interface GameEventMap {
   'game:won':         Record<string, never>;
   'pickup:collected':    { pickupType: PickupType };
   'room:entered':        { isBoss: boolean };
+  'room:cleared':        Record<string, never>;
+  'enemy:spawned':       Record<string, never>;
+  'wrangler:tether':     { active: boolean };
+  'zapsphere:warning':   { active: boolean };
   'zapsphere:lightning': Record<string, never>;
 }
 

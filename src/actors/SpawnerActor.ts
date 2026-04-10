@@ -126,6 +126,7 @@ export class SpawnerActor extends ex.Actor {
       case 'glitch_boss':    actor = new GlitchBossActor(this.pos.x, this.pos.y, this.player); break;
     }
     this.registerEnemy(actor);
+    GameEvents.emit('enemy:spawned', {});
   }
 
   private onDamage(healthRatio: number, damage: number): void {

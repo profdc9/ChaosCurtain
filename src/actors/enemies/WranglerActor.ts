@@ -106,6 +106,7 @@ export class WranglerActor extends ex.Actor {
     // Tether: activates once in range, persists until death
     if (!this.isTethered && dist <= WRANGLER.TETHER_RANGE) {
       this.isTethered = true;
+      GameEvents.emit('wrangler:tether', { active: true });
     }
 
     // Register pull force on player each frame while tethered
@@ -143,13 +144,28 @@ export class WranglerActor extends ex.Actor {
     GameEvents.emit('enemy:hit', { damage, x: this.pos.x, y: this.pos.y });
   }
 
-  private onDeath(): void {
-    // Remove tether pull before killing
+  /**
+   * Called for ALL kill scenarios: health death, room transition, direct kill.
+   * Cleans up pull registry and emits tether-off (idempotent via isTethered flag).
+   */
+  onKill(): void {
     (this.playerRef as ex.Actor & { pullRegistry?: Map<object, ex.Vector> })
       .pullRegistry?.delete(this);
+    this.deactivateTether();
+  }
+
+  private deactivateTether(): void {
+    if (this.isTethered) {
+      this.isTethered = false;
+      GameEvents.emit('wrangler:tether', { active: false });
+    }
+  }
+
+  private onDeath(): void {
+    this.deactivateTether();
     GameEvents.emit('enemy:died', { points: WRANGLER.POINT_VALUE, x: this.pos.x, y: this.pos.y });
     this.spawnFragments();
-    this.kill();
+    this.kill(); // → triggers onKill() which is now a safe no-op (isTethered already false)
   }
 
   private updateColors(healthRatio: number): void {

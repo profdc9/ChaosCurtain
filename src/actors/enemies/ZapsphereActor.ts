@@ -28,6 +28,7 @@ export class ZapsphereActor extends ex.Actor {
   private colorPhase   = 0;
   private dwellTimer   = 0;
   private lightningCooldown = 0;
+  private playerInDanger = false;
   private clusterTarget: ex.Vector | null = null;
   private clusterUpdateTimer = 0;
 
@@ -90,8 +91,16 @@ export class ZapsphereActor extends ex.Actor {
     this.squareAngle += ZAPSPHERE.SQUARE_ROT_BASE * (1 + ZAPSPHERE.SQUARE_ROT_ACCEL * dwellRatio) * dt;
     this.colorPhase  += ZAPSPHERE.COLOR_CYCLE_BASE * (1 + ZAPSPHERE.COLOR_CYCLE_ACCEL * dwellRatio) * dt;
 
-    // Dwell tracking
+    // Dwell tracking + proximity warning
     const dist = this.pos.distance(this.playerRef.pos);
+    const inDanger = dist <= ZAPSPHERE.DANGER_RADIUS;
+    if (inDanger && !this.playerInDanger) {
+      this.playerInDanger = true;
+      GameEvents.emit('zapsphere:warning', { active: true });
+    } else if (!inDanger && this.playerInDanger) {
+      this.playerInDanger = false;
+      GameEvents.emit('zapsphere:warning', { active: false });
+    }
     if (dist <= ZAPSPHERE.DANGER_RADIUS) {
       this.dwellTimer += dt;
       this.lightningCooldown = Math.max(0, this.lightningCooldown - dt);
@@ -158,10 +167,26 @@ export class ZapsphereActor extends ex.Actor {
     GameEvents.emit('enemy:hit', { damage, x: this.pos.x, y: this.pos.y });
   }
 
+  /**
+   * Called for ALL kill scenarios: health death, room transition, direct kill.
+   * Emits warning-off (idempotent via playerInDanger flag).
+   */
+  onKill(): void {
+    this.deactivateWarning();
+  }
+
+  private deactivateWarning(): void {
+    if (this.playerInDanger) {
+      this.playerInDanger = false;
+      GameEvents.emit('zapsphere:warning', { active: false });
+    }
+  }
+
   private onDeath(): void {
+    this.deactivateWarning();
     GameEvents.emit('enemy:died', { points: ZAPSPHERE.POINT_VALUE, x: this.pos.x, y: this.pos.y });
     this.spawnFragments();
-    this.kill();
+    this.kill(); // → triggers onKill() which is now a safe no-op (playerInDanger already false)
   }
 
   private triggerScalePulse(damage: number): void {
