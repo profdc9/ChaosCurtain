@@ -104,15 +104,29 @@ export class SfxSystem {
 
   // ── Event subscriptions ──────────────────────────────────────────────────────
 
-  /** Returns current audio time, or null if context not yet running. */
-  private now(): number | null {
-    return AudioManager.isUnlocked ? Tone.now() : null;
+  // Per-voice "next safe start time" — prevents same-timestamp double-trigger
+  // on monophonic synths, which Tone.js rejects with a fatal assertion.
+  private readonly voiceNextTime = new Map<object, number>();
+  private static readonly MIN_GAP = 0.005; // 5 ms minimum between triggers
+
+  /**
+   * Returns the safe time to schedule the next event on `voice`, or null if
+   * the AudioContext is not yet running. Advances the per-voice cursor so the
+   * next call is guaranteed to be strictly later.
+   */
+  private now(voice: object, span = 0): number | null {
+    if (!AudioManager.isUnlocked) return null;
+    const t    = Tone.now();
+    const last = this.voiceNextTime.get(voice) ?? 0;
+    const safe = Math.max(t, last + SfxSystem.MIN_GAP);
+    this.voiceNextTime.set(voice, safe + span + SfxSystem.MIN_GAP);
+    return safe;
   }
 
   private subscribe(): void {
     GameEvents.on('bullet:fired', () => {
-      const now = this.now(); if (now === null) return;
       const dur = 0.08;
+      const now = this.now(this.shoot, dur); if (now === null) return;
       this.shoot.triggerAttack('C6', now);
       this.shoot.frequency.setValueAtTime(Tone.Frequency('C6').toFrequency(), now);
       this.shoot.frequency.exponentialRampToValueAtTime(
@@ -122,11 +136,11 @@ export class SfxSystem {
     });
 
     GameEvents.on('enemy:hit', ({ damage }) => {
-      const now = this.now(); if (now === null) return;
       if (damage >= DAMAGE.HEAVY_HIT_THRESHOLD) {
+        const now = this.now(this.hitHeavy, 0.15); if (now === null) return;
         this.hitHeavy.triggerAttackRelease('16n', now);
       } else {
-        // Pitch scales with damage: more damage → higher pitch
+        const now = this.now(this.hitLight, 0.08); if (now === null) return;
         const midiNote = 52 + Math.round((damage / DAMAGE.HEAVY_HIT_THRESHOLD) * 12);
         const note = Tone.Frequency(midiNote, 'midi').toNote();
         this.hitLight.triggerAttackRelease(note, '32n', now);
@@ -134,13 +148,12 @@ export class SfxSystem {
     });
 
     GameEvents.on('enemy:died', ({ points }) => {
-      const now = this.now(); if (now === null) return;
       if (points >= 2000) {
-        // Boss death: descending minor chord burst
+        const now = this.now(this.bossDie, 0.4); if (now === null) return;
         this.bossDie.triggerAttackRelease(['A4', 'C5', 'E5'], '8n', now);
         this.bossDie.triggerAttackRelease(['G3', 'A#3', 'D4'], '4n', now + 0.15);
       } else {
-        // Regular death: quick descending 3-note chirp
+        const now = this.now(this.enemyDie, 0.24); if (now === null) return;
         this.enemyDie.triggerAttackRelease('A4', '32n', now);
         this.enemyDie.triggerAttackRelease('E4', '32n', now + 0.08);
         this.enemyDie.triggerAttackRelease('A3', '32n', now + 0.16);
@@ -148,35 +161,35 @@ export class SfxSystem {
     });
 
     GameEvents.on('player:hit', () => {
-      const now = this.now(); if (now === null) return;
+      const now = this.now(this.playerHit, 0.25); if (now === null) return;
       this.playerHit.triggerAttackRelease('C1', '8n', now);
     });
 
     GameEvents.on('player:upgraded', () => {
-      const now = this.now(); if (now === null) return;
-      const notes = ['C5', 'E5', 'G5', 'C6'];
-      notes.forEach((n, i) => this.upgrade.triggerAttackRelease(n, '32n', now + i * 0.07));
+      const now = this.now(this.upgrade, 0.28); if (now === null) return;
+      ['C5', 'E5', 'G5', 'C6'].forEach((n, i) =>
+        this.upgrade.triggerAttackRelease(n, '32n', now + i * 0.07));
     });
 
     GameEvents.on('player:downgraded', () => {
-      const now = this.now(); if (now === null) return;
-      const notes = ['C6', 'G5', 'E5', 'C5'];
-      notes.forEach((n, i) => this.downgrade.triggerAttackRelease(n, '32n', now + i * 0.07));
+      const now = this.now(this.downgrade, 0.28); if (now === null) return;
+      ['C6', 'G5', 'E5', 'C5'].forEach((n, i) =>
+        this.downgrade.triggerAttackRelease(n, '32n', now + i * 0.07));
     });
 
     GameEvents.on('panic:deployed', () => {
-      const now = this.now(); if (now === null) return;
+      const now = this.now(this.panicNoise, 0.4); if (now === null) return;
       this.panicNoise.triggerAttackRelease('8n', now);
     });
 
     GameEvents.on('pickup:collected', () => {
-      const now = this.now(); if (now === null) return;
+      const now = this.now(this.pickupChime, 0.12); if (now === null) return;
       this.pickupChime.triggerAttackRelease('C6', '16n', now);
       this.pickupChime.triggerAttackRelease('E6', '16n', now + 0.06);
     });
 
     GameEvents.on('zapsphere:lightning', () => {
-      const now = this.now(); if (now === null) return;
+      const now = this.now(this.zapCrackle, 0.2); if (now === null) return;
       this.zapCrackle.triggerAttackRelease('32n', now);
     });
   }
