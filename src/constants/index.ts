@@ -366,6 +366,12 @@ export const SPAWNER = {
   FRAGMENT_LIFETIME_MAX: 1.4,
 } as const;
 
+// Audio volume configuration (dB; 0 = unity, -Infinity = silent)
+export const AUDIO = {
+  MUSIC_VOLUME_DB: -18,
+  SFX_VOLUME_DB:   -6,
+} as const;
+
 // Damage and hit feedback
 export const DAMAGE = {
   LIGHT_HIT_THRESHOLD: 15,

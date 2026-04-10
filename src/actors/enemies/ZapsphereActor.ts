@@ -150,6 +150,7 @@ export class ZapsphereActor extends ex.Actor {
     }).sharedState;
     ps?.applyDamage(ZAPSPHERE.LIGHTNING_DAMAGE);
     engine.currentScene.add(new LightningBoltActor(this.pos.clone(), this.playerRef.pos.clone()));
+    GameEvents.emit('zapsphere:lightning', {});
   }
 
   private onDamage(_healthRatio: number, damage: number): void {

@@ -10,13 +10,31 @@ import { PickupActor } from '../actors/PickupActor';
 import { MAZE, START_ROOM_ID } from '../rooms/MazeGraph';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
+import { AudioManager } from '../audio/AudioManager';
+import { MusicSystem } from '../audio/MusicSystem';
+import { SfxSystem } from '../audio/SfxSystem';
 
 export class GameplayScene extends ex.Scene {
   private sharedState!: SharedPlayerState;
   private roomManager!: RoomManager;
+  private musicSystem!: MusicSystem;
 
   onInitialize(engine: ex.Engine): void {
     this.sharedState = new SharedPlayerState();
+
+    // Audio — init volume nodes, wire up SFX listeners, pre-fetch gameplay track.
+    // Actual playback starts on the first user gesture (browser autoplay policy).
+    AudioManager.init();
+    this.musicSystem = new MusicSystem();
+    new SfxSystem(); // subscribes to GameEvents; no reference needed after construction
+
+    const unlockAudio = () => {
+      void AudioManager.unlock().then(() => this.musicSystem.startPending());
+      window.removeEventListener('keydown',      unlockAudio);
+      window.removeEventListener('pointerdown',  unlockAudio);
+    };
+    window.addEventListener('keydown',     unlockAudio, { once: false });
+    window.addEventListener('pointerdown', unlockAudio, { once: false });
 
     // Apply debug starting upgrades
     this.applyDebugUpgrades();

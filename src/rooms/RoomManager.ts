@@ -82,6 +82,11 @@ export class RoomManager {
     // Build new room.
     this._currentRoomId = roomDef.id;
     this._currentDifficulty = roomDef.difficulty;
+
+    const bossTypes = new Set(['bird_boss', 'snake_boss', 'zapsphere_boss', 'glitch_boss']);
+    const isBoss = roomDef.spawners.some(s => bossTypes.has(s.type));
+    GameEvents.emit('room:entered', { isBoss });
+
     this.buildWalls(roomDef);
     this.buildDoors(roomDef, entranceSide);
 

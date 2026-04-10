@@ -15,7 +15,9 @@ export interface GameEventMap {
   'fleet:lost':       Record<string, never>;
   'game:over':        Record<string, never>;
   'game:won':         Record<string, never>;
-  'pickup:collected': { pickupType: PickupType };
+  'pickup:collected':    { pickupType: PickupType };
+  'room:entered':        { isBoss: boolean };
+  'zapsphere:lightning': Record<string, never>;
 }
 
 class TypedEventBus {
