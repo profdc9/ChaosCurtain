@@ -67,8 +67,11 @@ export class RoomManager {
    */
   load(roomDef: RoomDef, entranceSide: DoorSide | null): void {
     // Remove all current room actors.
+    // Guard against actors that were queued via scene.add() but not yet
+    // processed by Excalibur's EntityManager — calling kill() on those
+    // logs "never added to the Scene" warnings and is a no-op anyway.
     for (const actor of this.roomActors) {
-      actor.kill();
+      if (actor.scene !== null) actor.kill();
     }
     this.roomActors = [];
     this.doors = [];

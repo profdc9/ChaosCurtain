@@ -28,6 +28,11 @@ export class MusicSystem {
   private currentTrack: TrackName | null       = null;
   private readonly midiCache = new Map<TrackName, Midi>();
 
+  // ── Diagnostic state ───────────────────────────────────────────────────────
+  private _loopCount   = 0;
+  private _notesFired  = 0;
+  private _diagInterval: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     GameEvents.on('room:entered', ({ isBoss }) => {
       void this.switchTo(isBoss ? 'boss' : 'gameplay');
@@ -36,6 +41,7 @@ export class MusicSystem {
 
   async switchTo(track: TrackName): Promise<void> {
     if (track === this.currentTrack) return;
+    console.log(`[Music] switchTo: ${this.currentTrack ?? 'none'} → ${track}`);
     this.stop();
     this.currentTrack = track;
     const midi = await this.loadMidi(track);
@@ -53,6 +59,11 @@ export class MusicSystem {
 
   stop(): void {
     if (this.parts.length === 0 && this.synths.length === 0) return;
+    console.log(`[Music] stop(): disposing ${this.parts.length} parts, ${this.synths.length} synths`);
+    if (this._diagInterval !== null) {
+      clearInterval(this._diagInterval);
+      this._diagInterval = null;
+    }
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
     for (const part  of this.parts)  part.dispose();
@@ -74,31 +85,66 @@ export class MusicSystem {
 
   private play(midi: Midi): void {
     const transport = Tone.getTransport();
-    transport.bpm.value = midi.header.tempos[0]?.bpm ?? 120;
+    const bpm = midi.header.tempos[0]?.bpm ?? 120;
+    transport.bpm.value = bpm;
     transport.loop    = true;
     transport.loopEnd = midi.duration;
 
-    // Collect eligible tracks (non-empty, non-percussion), cap at MAX_TRACKS
-    const eligible = midi.tracks.filter(
-      t => t.notes.length > 0 && t.channel !== 9,
-    ).slice(0, MAX_TRACKS);
+    this._loopCount  = 0;
+    this._notesFired = 0;
 
-    for (const track of eligible) {
+    // Log on each transport loop
+    transport.on('loopEnd', () => {
+      this._loopCount++;
+      console.log(
+        `[Music] loop #${this._loopCount} | parts=${this.parts.length}` +
+        ` synths=${this.synths.length} notesFired=${this._notesFired}` +
+        ` transport.pos=${transport.position}`,
+      );
+    });
+
+    // Collect eligible tracks (non-empty, non-percussion), cap at MAX_TRACKS
+    const allEligible = midi.tracks.filter(
+      t => t.notes.length > 0 && t.channel !== 9,
+    );
+    const eligible = allEligible.slice(0, MAX_TRACKS);
+
+    console.log(
+      `[Music] play(): track="${this.currentTrack ?? ''}"` +
+      ` BPM=${bpm} duration=${midi.duration.toFixed(2)}s` +
+      ` totalMidiTracks=${midi.tracks.length}` +
+      ` eligibleTracks=${allEligible.length} activating=${eligible.length}`,
+    );
+
+    eligible.forEach((track, i) => {
       const avgMidi = track.notes.reduce((s, n) => s + n.midi, 0) / track.notes.length;
       const isBass  = avgMidi < 55;
 
-      // PolySynth with 2 voices per track: each note gets its own oscillator so
-      // simultaneous notes (common in MIDI) don't hit the "start time must be
-      // strictly greater" assertion on a shared oscillator. The fixed pool of 2
-      // prevents the unbounded voice accumulation that caused the original
-      // degradation with unlimited polyphony.
+      // Count max simultaneous notes (worst-case polyphony demand)
+      let maxSimul = 0;
+      for (let a = 0; a < track.notes.length; a++) {
+        const aEnd = track.notes[a].time + track.notes[a].duration;
+        let simul = 1;
+        for (let b = a + 1; b < track.notes.length; b++) {
+          if (track.notes[b].time >= aEnd) break;
+          simul++;
+        }
+        if (simul > maxSimul) maxSimul = simul;
+      }
+
+      console.log(
+        `[Music]   track[${i}]: name="${track.name}" channel=${track.channel}` +
+        ` notes=${track.notes.length} avgMidi=${avgMidi.toFixed(1)}` +
+        ` type=${isBass ? 'bass' : 'melody'} maxSimulNotes=${maxSimul}`,
+      );
+
       const synth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: isBass ? 'sawtooth' as const : 'square' as const },
         envelope:   isBass
           ? { attack: 0.01, decay: 0.1,  sustain: 0.3, release: 0.1  }
           : { attack: 0.01, decay: 0.05, sustain: 0.5, release: 0.05 },
       }).connect(AudioManager.musicVol);
-      synth.maxPolyphony = 2;
+      synth.maxPolyphony = 6;
       synth.volume.value = SYNTH_VOLUME_DB;
 
       const events: NoteEvent[] = track.notes
@@ -113,14 +159,27 @@ export class MusicSystem {
         }));
 
       const part = new Tone.Part<NoteEvent>((time, ev) => {
+        this._notesFired++;
         synth.triggerAttackRelease(ev.note, ev.duration, time, ev.velocity);
       }, events);
 
       part.start(0);
       this.parts.push(part);
       this.synths.push(synth);
-    }
+    });
+
+    // Periodic health check every 10 s
+    this._diagInterval = setInterval(() => {
+      const ctx = Tone.getContext().rawContext as AudioContext;
+      console.log(
+        `[Music] health: parts=${this.parts.length} synths=${this.synths.length}` +
+        ` notesFired=${this._notesFired} loops=${this._loopCount}` +
+        ` transport.state=${transport.state}` +
+        ` audioCtx.state=${ctx.state}`,
+      );
+    }, 10_000);
 
     transport.start();
+    console.log(`[Music] transport started — maxPolyphony=6 per synth`);
   }
 }

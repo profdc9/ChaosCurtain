@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tonejs/midi": "^2.0.28",
     "excalibur": "^0.29.0",
-    "hershey": "^2.1.7"
+    "hershey": "^2.1.7",
+    "tone": "^15.1.22"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

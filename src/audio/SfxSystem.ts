@@ -11,7 +11,7 @@ export class SfxSystem {
   // ── Voices ──────────────────────────────────────────────────────────────────
   private readonly shoot: Tone.Synth;
   private readonly hitLight: Tone.Synth;
-  private readonly hitHeavy: Tone.MetalSynth;
+  private readonly hitHeavy: Tone.PolySynth;
   private readonly enemyDie: Tone.Synth;
   private readonly bossDie: Tone.PolySynth;
   private readonly playerHit: Tone.MembraneSynth;
@@ -36,7 +36,7 @@ export class SfxSystem {
       volume: -10,
     }).connect(dst);
 
-    this.hitHeavy = new Tone.MetalSynth({
+    this.hitHeavy = new Tone.PolySynth(Tone.MetalSynth, {
       envelope:        { attack: 0.001, decay: 0.15, release: 0.01 },
       harmonicity:     5.1,
       modulationIndex: 32,
@@ -44,7 +44,7 @@ export class SfxSystem {
       octaves:         1.5,
       volume:          -8,
     }).connect(dst);
-    this.hitHeavy.frequency.value = 200;
+    this.hitHeavy.maxPolyphony = 4;
 
     this.enemyDie = new Tone.Synth({
       oscillator: { type: 'square' },
@@ -138,7 +138,7 @@ export class SfxSystem {
     GameEvents.on('enemy:hit', ({ damage }) => {
       if (damage >= DAMAGE.HEAVY_HIT_THRESHOLD) {
         const now = this.now(this.hitHeavy, 0.15); if (now === null) return;
-        this.hitHeavy.triggerAttackRelease('16n', now);
+        this.hitHeavy.triggerAttackRelease('G3', '16n', now);
       } else {
         const now = this.now(this.hitLight, 0.08); if (now === null) return;
         const midiNote = 52 + Math.round((damage / DAMAGE.HEAVY_HIT_THRESHOLD) * 12);
