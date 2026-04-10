@@ -12,6 +12,8 @@ const TRACK_URLS: Record<TrackName, string> = {
 
 // Per-synth attenuation so multiple voices don't clip
 const SYNTH_VOLUME_DB = -10;
+// Maximum melodic tracks to activate — limits Web Audio node count
+const MAX_TRACKS = 4;
 
 interface NoteEvent {
   time:     number;
@@ -22,7 +24,7 @@ interface NoteEvent {
 
 export class MusicSystem {
   private parts:        Tone.Part<NoteEvent>[] = [];
-  private synths:       Tone.PolySynth[]       = [];
+  private synths:       Tone.Synth[]           = [];
   private currentTrack: TrackName | null       = null;
   private readonly midiCache = new Map<TrackName, Midi>();
 
@@ -75,36 +77,33 @@ export class MusicSystem {
     transport.loop    = true;
     transport.loopEnd = midi.duration;
 
-    for (const track of midi.tracks) {
-      if (track.notes.length === 0) continue;
+    // Collect eligible tracks (non-empty, non-percussion), cap at MAX_TRACKS
+    const eligible = midi.tracks.filter(
+      t => t.notes.length > 0 && t.channel !== 9,
+    ).slice(0, MAX_TRACKS);
 
-      // Skip percussion channel (MIDI channel 9 / GM channel 10)
-      if (track.channel === 9) continue;
-
+    for (const track of eligible) {
       const avgMidi = track.notes.reduce((s, n) => s + n.midi, 0) / track.notes.length;
       const isBass  = avgMidi < 55;
 
-      const synth = isBass
-        ? new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: 'sawtooth' as const },
-            envelope:   { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.1 },
-          }).connect(AudioManager.musicVol)
-        : new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: 'square' as const },
-            envelope:   { attack: 0.01, decay: 0.05, sustain: 0.5, release: 0.05 },
-          }).connect(AudioManager.musicVol);
-
-      synth.volume.value = SYNTH_VOLUME_DB;
+      // Monophonic Synth per track — one oscillator, no voice accumulation.
+      // Overlapping MIDI notes steal the previous note (authentic chiptune behaviour).
+      const synth = new Tone.Synth({
+        oscillator: { type: isBass ? 'sawtooth' as const : 'square' as const },
+        envelope:   isBass
+          ? { attack: 0.01, decay: 0.1,  sustain: 0.3, release: 0.1  }
+          : { attack: 0.01, decay: 0.05, sustain: 0.5, release: 0.05 },
+        volume: SYNTH_VOLUME_DB,
+      }).connect(AudioManager.musicVol);
 
       const events: NoteEvent[] = track.notes
-        .filter(n => n.duration > 0)   // skip zero-duration MIDI artifacts
+        .filter(n => n.duration > 0)
         .map(n => ({
           time:     n.time,
-          // Bass tracks: drop an octave for a punchier low end
           note:     isBass
                       ? Tone.Frequency(Math.max(0, n.midi - 12), 'midi').toNote()
                       : n.name,
-          duration: Math.max(0.016, n.duration), // clamp to ~1 frame minimum
+          duration: Math.max(0.016, n.duration),
           velocity: n.velocity,
         }));
 
