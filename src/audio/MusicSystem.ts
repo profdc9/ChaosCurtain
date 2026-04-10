@@ -96,15 +96,17 @@ export class MusicSystem {
 
       synth.volume.value = SYNTH_VOLUME_DB;
 
-      const events: NoteEvent[] = track.notes.map(n => ({
-        time:     n.time,
-        // Bass tracks: drop an octave for a punchier low end
-        note:     isBass
-                    ? Tone.Frequency(Math.max(0, n.midi - 12), 'midi').toNote()
-                    : n.name,
-        duration: n.duration,
-        velocity: n.velocity,
-      }));
+      const events: NoteEvent[] = track.notes
+        .filter(n => n.duration > 0)   // skip zero-duration MIDI artifacts
+        .map(n => ({
+          time:     n.time,
+          // Bass tracks: drop an octave for a punchier low end
+          note:     isBass
+                      ? Tone.Frequency(Math.max(0, n.midi - 12), 'midi').toNote()
+                      : n.name,
+          duration: Math.max(0.016, n.duration), // clamp to ~1 frame minimum
+          velocity: n.velocity,
+        }));
 
       const part = new Tone.Part<NoteEvent>((time, ev) => {
         synth.triggerAttackRelease(ev.note, ev.duration, time, ev.velocity);

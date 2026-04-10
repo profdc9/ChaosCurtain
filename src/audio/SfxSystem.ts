@@ -104,14 +104,19 @@ export class SfxSystem {
 
   // ── Event subscriptions ──────────────────────────────────────────────────────
 
+  /** Returns current audio time, or null if context not yet running. */
+  private now(): number | null {
+    return AudioManager.isUnlocked ? Tone.now() : null;
+  }
+
   private subscribe(): void {
     GameEvents.on('bullet:fired', () => {
-      const now = Tone.now();
+      const now = this.now(); if (now === null) return;
       this.shoot.triggerAttackRelease('C6', '64n', now);
     });
 
     GameEvents.on('enemy:hit', ({ damage }) => {
-      const now = Tone.now();
+      const now = this.now(); if (now === null) return;
       if (damage >= DAMAGE.HEAVY_HIT_THRESHOLD) {
         this.hitHeavy.triggerAttackRelease('16n', now);
       } else {
@@ -123,7 +128,7 @@ export class SfxSystem {
     });
 
     GameEvents.on('enemy:died', ({ points }) => {
-      const now = Tone.now();
+      const now = this.now(); if (now === null) return;
       if (points >= 2000) {
         // Boss death: descending minor chord burst
         this.bossDie.triggerAttackRelease(['A4', 'C5', 'E5'], '8n', now);
@@ -137,33 +142,36 @@ export class SfxSystem {
     });
 
     GameEvents.on('player:hit', () => {
-      this.playerHit.triggerAttackRelease('C1', '8n', Tone.now());
+      const now = this.now(); if (now === null) return;
+      this.playerHit.triggerAttackRelease('C1', '8n', now);
     });
 
     GameEvents.on('player:upgraded', () => {
-      const now = Tone.now();
+      const now = this.now(); if (now === null) return;
       const notes = ['C5', 'E5', 'G5', 'C6'];
       notes.forEach((n, i) => this.upgrade.triggerAttackRelease(n, '32n', now + i * 0.07));
     });
 
     GameEvents.on('player:downgraded', () => {
-      const now = Tone.now();
+      const now = this.now(); if (now === null) return;
       const notes = ['C6', 'G5', 'E5', 'C5'];
       notes.forEach((n, i) => this.downgrade.triggerAttackRelease(n, '32n', now + i * 0.07));
     });
 
     GameEvents.on('panic:deployed', () => {
-      this.panicNoise.triggerAttackRelease('8n', Tone.now());
+      const now = this.now(); if (now === null) return;
+      this.panicNoise.triggerAttackRelease('8n', now);
     });
 
     GameEvents.on('pickup:collected', () => {
-      const now = Tone.now();
+      const now = this.now(); if (now === null) return;
       this.pickupChime.triggerAttackRelease('C6', '16n', now);
       this.pickupChime.triggerAttackRelease('E6', '16n', now + 0.06);
     });
 
     GameEvents.on('zapsphere:lightning', () => {
-      this.zapCrackle.triggerAttackRelease('32n', Tone.now());
+      const now = this.now(); if (now === null) return;
+      this.zapCrackle.triggerAttackRelease('32n', now);
     });
   }
 }
