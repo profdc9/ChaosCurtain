@@ -12,32 +12,25 @@ import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
 import * as Tone from 'tone';
 import { AudioManager } from '../audio/AudioManager';
-import { MusicSystem } from '../audio/MusicSystem';
 import { SfxSystem } from '../audio/SfxSystem';
 
 export class GameplayScene extends ex.Scene {
   private sharedState!: SharedPlayerState;
   private roomManager!: RoomManager;
-  private musicSystem!: MusicSystem;
-
   onInitialize(engine: ex.Engine): void {
     this.sharedState = new SharedPlayerState();
 
     // Audio — init volume nodes, wire up SFX listeners, pre-fetch gameplay track.
     // Actual playback starts on the first user gesture (browser autoplay policy).
     AudioManager.init();
-    this.musicSystem = new MusicSystem();
     new SfxSystem(); // subscribes to GameEvents; no reference needed after construction
 
     // Unlock the Web Audio context on the first user gesture.
     // Tone.start() must be called synchronously inside the event handler.
-    // Using { once: true } on document ensures we catch the event regardless
-    // of which element has focus. Errors are logged rather than swallowed.
     const unlockAudio = async () => {
       try {
         await Tone.start();
         AudioManager.markUnlocked();
-        await this.musicSystem.startPending();
       } catch (err) {
         console.error('[Audio] Failed to start AudioContext:', err);
       }
