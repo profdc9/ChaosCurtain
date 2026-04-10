@@ -26,8 +26,8 @@ export class SfxSystem {
 
     this.shoot = new Tone.Synth({
       oscillator: { type: 'square' },
-      envelope:   { attack: 0.001, decay: 0.06, sustain: 0, release: 0.01 },
-      volume: -8,
+      envelope:   { attack: 0.001, decay: 0.08, sustain: 0, release: 0.01 },
+      volume: -18,
     }).connect(dst);
 
     this.hitLight = new Tone.Synth({
@@ -112,7 +112,13 @@ export class SfxSystem {
   private subscribe(): void {
     GameEvents.on('bullet:fired', () => {
       const now = this.now(); if (now === null) return;
-      this.shoot.triggerAttackRelease('C6', '64n', now);
+      const dur = 0.08;
+      this.shoot.triggerAttack('C6', now);
+      this.shoot.frequency.setValueAtTime(Tone.Frequency('C6').toFrequency(), now);
+      this.shoot.frequency.exponentialRampToValueAtTime(
+        Tone.Frequency('C3').toFrequency(), now + dur,
+      );
+      this.shoot.triggerRelease(now + dur);
     });
 
     GameEvents.on('enemy:hit', ({ damage }) => {
