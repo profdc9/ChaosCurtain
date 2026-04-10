@@ -243,6 +243,8 @@ export const GLITCH_BOSS = {
   BOX_HALF: 20,
   ARROW_LENGTH: 13,           // center to arrow tip
   RETREAT_SPEED: 100,         // slower than player (220) so gap can be closed
+  WALL_AVOIDANCE_DIST: 90,    // px from wall at which repulsion kicks in
+  WALL_AVOIDANCE_WEIGHT: 2.5, // relative weight of wall repulsion vs flee-from-player
   CONE_BASE_HALF: 0.30,       // rad, cone half-angle at max range (narrow)
   CONE_MAX_HALF: 1.35,        // rad, cone half-angle at close range (wide)
   CONE_MAX_DIST: 420,         // distance beyond which cone is at minimum angle
@@ -352,10 +354,10 @@ export const SPAWNER = {
   HEALTH: 80,
   COLLISION_DAMAGE: 10,
   POINT_VALUE: 200,
-  SPAWN_INTERVAL_SLOW: 6.0,   // seconds per enemy at difficulty 0
-  SPAWN_INTERVAL_FAST: 1.5,   // seconds per enemy at difficulty 1
+  SPAWN_INTERVAL_SLOW: 4.0,   // seconds per enemy at difficulty 0
+  SPAWN_INTERVAL_FAST: 1.0,   // seconds per enemy at difficulty 1
   INITIAL_DELAY_FACTOR: 0.5,  // first spawn fires at interval × this
-  MAX_LIVE_ENEMIES: 20,        // spawners pause when total live count (spawners+enemies) reaches this
+  MAX_LIVE_ENEMIES: 30,        // spawners pause when total live count (spawners+enemies) reaches this
   CANVAS_SIZE: 64,
   FRAGMENT_SPEED_MIN: 60,
   FRAGMENT_SPEED_MAX: 160,

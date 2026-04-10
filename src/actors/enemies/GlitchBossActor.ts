@@ -98,12 +98,30 @@ export class GlitchBossActor extends ex.Actor {
     // Cycle arrow color
     this.colorPhase += GLITCH_BOSS.COLOR_CYCLE_SPEED * dt;
 
-    // Retreat: move directly away from player
+    // Retreat: move away from player, with wall avoidance to prevent cornering
     const toPlayer = this.playerRef.pos.sub(this.pos);
     const dist      = toPlayer.size;
-    if (dist > 1) {
-      this.vel = toPlayer.normalize().scale(-GLITCH_BOSS.RETREAT_SPEED);
-    }
+
+    // Base flee direction: directly away from player
+    let moveDir = dist > 1 ? toPlayer.normalize().scale(-1) : ex.Vector.Zero;
+
+    // Wall repulsion: push away from nearby walls
+    const WD = GLITCH_BOSS.WALL_AVOIDANCE_DIST;
+    const WW = GLITCH_BOSS.WALL_AVOIDANCE_WEIGHT;
+    let wallForce = ex.Vector.Zero;
+    const dL = this.pos.x - INNER.L;
+    const dR = INNER.R - this.pos.x;
+    const dT = this.pos.y - INNER.T;
+    const dB = INNER.B - this.pos.y;
+    if (dL < WD) wallForce = wallForce.add(ex.vec( 1,  0).scale(1 - dL / WD));
+    if (dR < WD) wallForce = wallForce.add(ex.vec(-1,  0).scale(1 - dR / WD));
+    if (dT < WD) wallForce = wallForce.add(ex.vec( 0,  1).scale(1 - dT / WD));
+    if (dB < WD) wallForce = wallForce.add(ex.vec( 0, -1).scale(1 - dB / WD));
+
+    moveDir = moveDir.add(wallForce.scale(WW));
+    this.vel = moveDir.size > 0.01
+      ? moveDir.normalize().scale(GLITCH_BOSS.RETREAT_SPEED)
+      : ex.Vector.Zero;
 
     // Clamp to room
     this.pos = ex.vec(

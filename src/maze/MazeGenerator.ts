@@ -69,14 +69,14 @@ function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEn
     result.push({ type: 'wanderer', count: 1 });
     result.push({ type: 'dart',     count: 1 });
     result.push({ type: 'worm',     count: 1 });
-    if (rng.nextBool(0.06)) result.push({ type: 'wrangler', count: 1 });
+    if (rng.nextBool(0.30)) result.push({ type: 'wrangler', count: 1 });
   } else {
     result.push({ type: 'wanderer', count: 1 });
     result.push({ type: 'dart',     count: rng.nextInt(1, 2) });
     result.push({ type: 'worm',     count: 1 });
     result.push({ type: 'satellite', count: 1 });
     if (rng.nextBool(0.25)) result.push({ type: 'blaster',  count: 1 });
-    if (rng.nextBool(0.11)) result.push({ type: 'wrangler', count: 1 });
+    if (rng.nextBool(0.45)) result.push({ type: 'wrangler', count: 1 });
   }
 
   return result;
