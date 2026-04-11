@@ -2,6 +2,8 @@
 
 ## Co-op System
 
+**Current code:** `GameplayScene` constructs **one** `PlayerActor` (`SharedPlayerState` is already shared-state shaped for two players later). Co-op door / transition rules below are **design** — not implemented until a second ship exists.
+
 ### Players
 - 1 or 2 players
 - Player 1: light blue ship
@@ -49,14 +51,14 @@
 - Enemies are no longer pre-placed in rooms; all enemies emerge from machines
 
 ### Regular Spawners ✓ implemented
-- Base interval: `lerp(SPAWN_INTERVAL_SLOW=6s, SPAWN_INTERVAL_FAST=1.5s, difficulty)`
+- Base interval: `lerp(SPAWN_INTERVAL_SLOW, SPAWN_INTERVAL_FAST, difficulty)` with values from `SPAWNER` in `src/constants/index.ts` (**currently 4.0 s → 1.0 s** across difficulty 0→1)
 - Each enemy type has its own `INTERVAL_MULTIPLIER` applied on top: `spawnInterval = base × multiplier`
   - Wanderer 1.0×, Worm 1.2×, Dart 1.5×, Satellite 1.5×, Wrangler 2.0×, Blaster 2.5×
 - First spawn fires at `spawnInterval × INITIAL_DELAY_FACTOR (0.5)` so rooms feel active immediately
 - Multiple may appear in a single room; count and enemy type distribution scale with difficulty
 
 #### Spawn throttle near cap
-- `MAX_LIVE_ENEMIES = 20` is a soft target, not a hard cutoff
+- `MAX_LIVE_ENEMIES` (**30** in `SPAWNER`) is used in the probability gate, not as a hard spawn cap
 - When a spawner's timer fires, a probabilistic check gates the spawn:
   `threshold = liveCount × SPAWNING_PRIORITY / MAX_LIVE_ENEMIES`
   Spawn succeeds if `random() > threshold`
@@ -70,14 +72,14 @@
 ### Boss Spawners ✓ implemented
 - `oneShot = true`: timer initialised to 0 (fires immediately on room entry), then set to `Infinity`
 - A boss room contains one boss spawner + 1–2 regular fodder spawners
-- Snake boss assigned to the hardest non-exit room; Bird boss to second hardest
+- **Boss room assignment** (`MazeGenerator.ts`, four hardest non-exit rooms by difficulty): **GlitchBoss** (hardest), **Zapsphere** (2nd), **Snake** (3rd), **Bird** (4th — first boss encountered on the hardest→easiest ordering used in code)
 
 ### Visual Design ✓ implemented
 - Box (40×40) drawn with a heavy line: white when at full health, shifts to red as damaged
 - Box contains a miniature portrait of the enemy type it spawns:
   - Wanderer: small gray square; Dart: small cyan chevron; Wrangler: green circle + yellow satellites
   - Satellite: blue circle + gray spokes; Worm: brown circles + yellow line; Blaster: 5 spike lines
-  - Bird boss: yellow V-wings + head V; Snake boss: chain of green circles
+  - Bird boss: yellow V-wings + head V; Snake boss: chain of green circles; Zapsphere boss: cyan ring + gray square; Glitch boss: white box + green arrow
 - Subject to the same scale pulse hit feedback as enemies
 - On destruction: 4 box-side segments fly apart with the burning fragment animation; emits `enemy:died`
 

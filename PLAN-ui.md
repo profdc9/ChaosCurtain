@@ -64,12 +64,16 @@
 | Shield | Box-with-X icon × level + charge indicator |
 | Panic buttons | Top hat icon × count |
 
+**Implemented in `HUD.ts` today:** health bar (zig-zag), fleet × ship icon, score, shooter / weapon power / shield / panic indicators. **Not implemented yet:** multiplier line, room timer (and streak logic — see `SCORE` constants unused in gameplay).
+
 ---
 
 ## Pause Menu
 
 - Resume
 - Quit
+
+**Current code:** no pause overlay or scene — design only.
 
 ---
 
@@ -79,6 +83,8 @@
 - Rooms cleared
 - Enemies destroyed by type (one count per enemy type: Wanderer, Dart, Wrangler, Satellite, Worm, Blaster, Bird, Snake, Zapsphere, GlitchBoss)
 - Time elapsed (total run)
+
+**Current code:** no dedicated `GameOverScene` / `VictoryScene`; fleet loss and game over emit events (`fleet:lost`, `game:over`) for audio. **`game:won` is never emitted** — clearing the exit room does not yet trigger a win flow or UI.
 
 ---
 
@@ -91,21 +97,29 @@ Wanderer < Dart < Worm < Satellite < Blaster < Wrangler < Bird < Snake < Zapsphe
 
 Bosses worth significantly more than regular enemies.
 
+**Implemented:** points from `enemy:died` / spawner death accumulate in `SharedPlayerState.score` (per-type values live in `src/constants/index.ts`).
+
 ### Room Clear Bonus
 - Awarded when all enemies and spawners in a room are destroyed
 - Scales with room difficulty — harder rooms yield larger bonuses
+
+**Not implemented** — no bonus score on `room:cleared`.
 
 ### Time Bonus
 - Awarded on room clear based on speed of clear
 - Faster clear = larger bonus
 - Incentivizes aggressive play over cautious farming
 
+**Not implemented.**
+
 ### Kill Streak Multiplier
 - Triggered when a threshold number of enemies are destroyed within a rolling 10-second window
 - Multiplier increases with successive kills within the window
 - Resets when the window expires without enough kills
-- Example tiers (TBD during balancing):
+- Example tiers (defaults exist as `SCORE.STREAK_*` in constants — **not wired** to `addScore` yet):
   - 3 kills / 10s → 2×
   - 5 kills / 10s → 3×
   - 8 kills / 10s → 4×
 - Multiplier display on HUD flashes/pulses when active to reinforce urgency of maintaining the streak
+
+**Not implemented** (constants only).

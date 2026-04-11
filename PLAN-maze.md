@@ -10,11 +10,11 @@
 - Tunable via `MAZE_GEN` constants: `GRID_W` (default 5), `GRID_H` (default 4), `SEED`
 - Tunable parameters (partially implemented):
   - Grid dimensions ✓
-  - Enemy density per room ✓ (scales with difficulty tier)
+  - Enemy mix per room ✓ (`buildSpawners` scales with difficulty; exit room has no spawners)
   - Room merge probability — deferred (requires variable room dimensions + camera)
-  - Spawner count per room — deferred (spawners not yet implemented)
-  - Pickup density — deferred (pickups not yet implemented)
-  - Boss room frequency — deferred (bosses not yet implemented)
+  - Spawner **placement** count is driven by `buildSpawners` (not a separate maze knob)
+  - Pickup spawn rate — **not** in `MAZE_GEN`; global timer in `GameplayScene` (60–120 s between spawns)
+  - Boss rooms ✓ four hardest non-exit cells get fixed boss types (see `MazeGenerator.ts` comments)
 
 ---
 
@@ -45,7 +45,7 @@
 - `RoomManager` tracks cleared room IDs in a persistent `Set<string>` across transitions
 - On re-entry: no enemies spawned, doors unlock immediately
 - Doors permanently open (green) — player can freely backtrack
-- Pickups respawn on room entry or on a periodic timer — deferred (pickups not yet implemented)
+- Pickups: **periodic** spawns in `GameplayScene` ✓ (random interior, type weighted by what the player still needs). **Not** implemented: extra spawns tied to room entry / `RoomManager` when revisiting cleared rooms (pickups are not cleared on transition today — they persist in the scene).
 
 ### Uncleared Rooms ✓ implemented
 - If the player exits before clearing, the room fully resets to its initial state

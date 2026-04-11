@@ -9,7 +9,7 @@ Applies to: players, enemies, spawner machines
   - Light hit: ~0.3 seconds (fast pulse)
   - Major hit: ~2.0 seconds (slow swell and recession)
 - Scale rate also maps to damage — light hits pulse quickly, heavy hits swell and recede slowly
-- Peak scale size TBD (e.g. 1.3× normal)
+- Peak scale: **`DAMAGE.SCALE_PEAK` = 1.3** in `src/constants/index.ts` (used by `HealthComponent` pulse tweens)
 - Implemented as a smooth ease-in/ease-out tween on the scale property
 
 ---

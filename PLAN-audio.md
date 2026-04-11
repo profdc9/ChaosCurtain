@@ -73,6 +73,8 @@ Design columns describe the original intent; implementation is **ZzFX presets** 
 
 ### GameEvents (audio-related)
 
+- **`game:won`** — `ZzfxSfxSystem` subscribes, but **nothing emits** this event yet (no victory transition in `RoomManager` / `GameplayScene`).
+
 - `room:cleared` — `RoomManager.unlockDoors()`
 - `enemy:spawned` — `SpawnerActor.spawnEnemy()`
 - `wrangler:tether { active }` — `WranglerActor` tether state; **cleanup on `onPreKill`** (Excalibur does not call `onKill`)

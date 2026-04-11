@@ -11,7 +11,7 @@ Enemies are composed of independent, combinable parts to keep the system extensi
 - **Special traits** — optional flags (door blocker, boss, etc.)
 
 ### Design Note
-All enemies defined so far are **kinetic threats** — they are the projectiles. Danger comes from contact, not from being shot at. Whether any enemies will fire projectiles is TBD.
+Most threats are **contact-based** (body vs player). **Exceptions in code:** **Blaster** applies damage in a burst when it enters fire range (with `LightningBoltActor` as a visual), then dies; **Zapsphere** uses timed lightning strikes (`LightningBoltActor`). There is **no** shared enemy “bullet” pool colliding like `BulletActor` — ranged patterns today are scripted strikes / VFX, not reusable projectile patterns for all types.
 
 ---
 

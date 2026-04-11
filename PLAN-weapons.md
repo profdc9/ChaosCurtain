@@ -38,7 +38,7 @@ Bullets appear as small bright white dots. Linear upgrade path:
 - Appear as smoothly fading circles (sine-wave lerp between muted blue #0000aa and 75% white #bfbfbf, period 1.2s)
 - Interior vector graphic identifies upgrade type; outer/inner colors fade in opposite phase
 - Player collides to collect — no button press required (`PickupActor`, `ex.CollisionType.Passive`)
-- Respawn on room entry or periodic timer in cleared rooms — deferred (RoomManager pickup placement not yet implemented)
+- **Periodic** spawns ✓ — `GameplayScene` timer (60–120 s), not `RoomManager`. **Deferred:** extra placement logic on room entry / cleared-room-specific respawn rules (still not owned by `RoomManager`).
 
 ### Pickup Interior Graphics ✓ implemented
 - Shooter type: line with dot at tip (forward direction)

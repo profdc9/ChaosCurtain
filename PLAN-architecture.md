@@ -38,6 +38,8 @@ src/
 | `TestControlsScene` | Input verification screen |
 | `SettingsScene` | Audio and control configuration |
 
+**`main.ts` today:** only `GameplayScene` is registered and started. Other rows remain design targets.
+
 ---
 
 ## Entity/Component Architecture
@@ -122,7 +124,8 @@ A single typed global `GameEvents` bus. All cross-system communication goes thro
 | `wrangler:tether` / `zapsphere:warning` | respective actors | `ZzfxSfxSystem` (ref-counted loops) |
 | `zapsphere:lightning` | `ZapsphereActor` | `ZzfxSfxSystem` |
 | `score:changed` / `health:changed` | `SharedPlayerState` | HUD (no SFX today) |
-| `fleet:lost` / `game:over` / `game:won` | `SharedPlayerState` / (future) | `ZzfxSfxSystem` where wired |
+| `fleet:lost` / `game:over` | `SharedPlayerState.applyDamage` | `ZzfxSfxSystem` |
+| `game:won` | *(not emitted yet — no victory transition wired)* | `ZzfxSfxSystem` listens (fanfare ready) |
 
 Full typed list: `src/utils/GameEvents.ts`.
 
@@ -139,7 +142,7 @@ Live in `src/systems/` — independent of any single actor:
 | `RoomManager` ✓ | Tracks room state (including cleared set), triggers transitions, handles room reset (`src/rooms/RoomManager.ts`) |
 | `DamageSystem` ✓ | Implemented inside `SharedPlayerState.applyDamage` — shield absorption → health → threshold → upgrade loss |
 | `UpgradeManager` ✓ | Implemented inside `SharedPlayerState` — shooterType, weaponPower, shield, panicButton tracking and application |
-| `ScoreManager` | Score accumulation, streak timer, multiplier, room clear and time bonuses — deferred |
+| `ScoreManager` | **Deferred as a standalone system.** Today: `SharedPlayerState.addScore` on `enemy:died` only. `SCORE` constants (`STREAK_*`) exist in `src/constants/index.ts` but **are not read** by gameplay code yet — no streak multiplier or room/time bonuses. |
 | `AudioManager` | Shared `AudioContext`, `musicGainNode` + `sfxGainNode`, `unlock()` — **active** |
 | `ZzfxSfxSystem` | `GameEvents` → baked ZzFX buffers → `sfxGainNode` — **active** (`GameplayScene`) |
 | `ZzfxmMusicPlayer` | ZzFXM render + looping BGM on `musicGainNode` — **active** |
@@ -161,7 +164,7 @@ Generator produces a **room graph**:
 
 A `StrokeFont` utility class in `src/ui/`:
 - Maps each character to an array of line segment coordinates
-- Used by all UI rendering — HUD, menus, game over screen, score display
+- Used by HUD, start overlay, debug overlay, etc. (dedicated game-over / menu scenes not built yet)
 - Defined once, used everywhere
 - Consistent with the vector display aesthetic
 
@@ -175,9 +178,9 @@ All tunable game values live in `src/constants/`:
 - Movement speeds
 - Upgrade damage threshold
 - Shield reduction curve
-- Streak timing windows
+- Streak timing windows (`SCORE.*` — **present; gameplay not wired**)
 - Point values per enemy type
-- Room clear and time bonus formulas
+- Room clear and time bonus formulas (**not used in scoring yet**)
 - Spawner timing intervals
 
 **Never use magic numbers in game logic.** All values reference named constants for easy balancing iteration.
@@ -186,28 +189,10 @@ All tunable game values live in `src/constants/`:
 
 ## Development Approach — Vertical Slice First
 
-Start with a minimal but complete game loop before building complex systems:
+The project began from a **minimal vertical slice** (single room, one player, one enemy type, basic HUD) to validate input → movement → shooting → collision → damage → feedback.
 
-### Vertical Slice Scope
+### Current `main` scope (high level)
 
-**Included:**
-- Single static room with walls
-- One PlayerActor (mouse+keyboard)
-- Single-shot white dot bullets
-- One Wanderer enemy
-- HealthComponent with scale pulse
-- Color shift as Wanderer takes damage
-- Destruction animation on Wanderer death
-- Basic HUD (health bar + score)
-- Collision groups configured correctly
+**In the tree today:** procedural maze + `RoomManager` room loads, **spawner machines** and full enemy roster, **upgrades and pickups** (scene-level pickup timer), **Web Audio + ZzFX / ZzFXM**, **start overlay** (not a full main menu), **debug overlay** + `DebugConfig` file overrides.
 
-**Excluded until slice is validated:**
-- Maze generation and room transitions
-- Spawner machines
-- Co-op / second player
-- Upgrades and pickups
-- Audio
-- Menus
-- Additional enemy types
-
-This validates the core architecture (input → movement → shooting → collision → damage → visual feedback) before complexity is layered on top. Structural issues surface early when they are cheap to fix.
+**Still thin vs design docs:** second player / co-op door rules, dedicated menu/pause/game-over scenes, kill-streak scoring and room/time bonuses, victory (`game:won`) emission, optional systems like `BulletPool`.
