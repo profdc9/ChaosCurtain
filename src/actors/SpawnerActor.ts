@@ -22,7 +22,8 @@ export class SpawnerActor extends ex.Actor {
 
   readonly healthComp: HealthComponent;
   private readonly enemyType: SpawnEnemyType;
-  private readonly player: ex.Actor;
+  /** Resolves which player ship this spawn should track (nearest for coop). */
+  private readonly pickTargetPlayer: (from: ex.Vector) => ex.Actor;
   private readonly registerEnemy: (actor: ex.Actor) => void;
   private readonly getLiveCount: () => number;
   private readonly spawnInterval: number;
@@ -39,7 +40,7 @@ export class SpawnerActor extends ex.Actor {
     enemyType: SpawnEnemyType,
     spawnInterval: number,
     difficulty: number,
-    player: ex.Actor,
+    pickTargetPlayer: (from: ex.Vector) => ex.Actor,
     registerEnemy: (actor: ex.Actor) => void,
     getLiveCount: () => number,
     oneShot = false,
@@ -54,7 +55,7 @@ export class SpawnerActor extends ex.Actor {
     // One-shot spawners fire immediately (timer = 0); others fire after half-interval
     this.spawnTimer = oneShot ? 0 : this.spawnInterval * SPAWNER.INITIAL_DELAY_FACTOR;
     this.difficulty = difficulty;
-    this.player = player;
+    this.pickTargetPlayer = pickTargetPlayer;
     this.registerEnemy = registerEnemy;
     this.getLiveCount = getLiveCount;
 
@@ -108,22 +109,29 @@ export class SpawnerActor extends ex.Actor {
   }
 
   private spawnEnemy(): void {
+    const target = this.pickTargetPlayer(this.pos);
     let actor: ex.Actor;
     switch (this.enemyType) {
       case 'wanderer':  actor = new WandererActor(this.pos.x, this.pos.y); break;
-      case 'dart':      actor = new DartActor(this.pos.x, this.pos.y, this.player); break;
-      case 'wrangler':  actor = new WranglerActor(this.pos.x, this.pos.y, this.player); break;
-      case 'satellite': actor = new SatelliteActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
+      case 'dart':      actor = new DartActor(this.pos.x, this.pos.y, target); break;
+      case 'wrangler':  actor = new WranglerActor(this.pos.x, this.pos.y, target); break;
+      case 'satellite': actor = new SatelliteActor(this.pos.x, this.pos.y, target, this.difficulty); break;
       case 'worm': {
         const splitsLeft = this.difficulty >= 0.66 ? 2 : 1;
-        actor = new WormActor(this.pos.x, this.pos.y, this.player, WORM.HEALTH, splitsLeft, this.registerEnemy);
+        actor = new WormActor(
+          this.pos.x, this.pos.y,
+          (from) => this.pickTargetPlayer(from),
+          WORM.HEALTH,
+          splitsLeft,
+          this.registerEnemy,
+        );
         break;
       }
-      case 'blaster':   actor = new BlasterActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
-      case 'bird_boss':      actor = new BirdBossActor(this.pos.x, this.pos.y, this.player); break;
-      case 'snake_boss':     actor = new SnakeBossActor(this.pos.x, this.pos.y, this.player, this.difficulty, this.registerEnemy); break;
-      case 'zapsphere_boss': actor = new ZapsphereActor(this.pos.x, this.pos.y, this.player, this.difficulty); break;
-      case 'glitch_boss':    actor = new GlitchBossActor(this.pos.x, this.pos.y, this.player); break;
+      case 'blaster':   actor = new BlasterActor(this.pos.x, this.pos.y, target, this.difficulty); break;
+      case 'bird_boss':      actor = new BirdBossActor(this.pos.x, this.pos.y, (from) => this.pickTargetPlayer(from)); break;
+      case 'snake_boss':     actor = new SnakeBossActor(this.pos.x, this.pos.y, (from) => this.pickTargetPlayer(from), this.difficulty, this.registerEnemy); break;
+      case 'zapsphere_boss': actor = new ZapsphereActor(this.pos.x, this.pos.y, (from) => this.pickTargetPlayer(from), this.difficulty); break;
+      case 'glitch_boss':    actor = new GlitchBossActor(this.pos.x, this.pos.y, (from) => this.pickTargetPlayer(from)); break;
     }
     this.registerEnemy(actor);
     GameEvents.emit('enemy:spawned', {});

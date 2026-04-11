@@ -15,6 +15,7 @@ const INNER = {
 };
 
 type PlayerRef = ex.Actor & {
+  isPlayer?: boolean;
   glitchRegistry?: Map<object, ex.Vector>;
   sharedState?: { applyDamage: (n: number) => void };
 };
@@ -25,7 +26,7 @@ export class GlitchBossActor extends ex.Actor {
   readonly collisionDamage = GLITCH_BOSS.COLLISION_DAMAGE;
 
   readonly healthComp: HealthComponent;
-  private readonly playerRef: ex.Actor;
+  private readonly pickTargetPlayer: (from: ex.Vector) => ex.Actor;
 
   private arrowAngle = 0;
   private colorPhase = 0;
@@ -33,13 +34,13 @@ export class GlitchBossActor extends ex.Actor {
 
   private readonly glitchCanvas: ex.Canvas;
 
-  constructor(x: number, y: number, player: ex.Actor) {
+  constructor(x: number, y: number, pickTargetPlayer: (from: ex.Vector) => ex.Actor) {
     super({
       pos: ex.vec(x, y),
       collisionType: ex.CollisionType.Active,
     });
 
-    this.playerRef = player;
+    this.pickTargetPlayer = pickTargetPlayer;
 
     this.collider.useCircleCollider(GLITCH_BOSS.COLLIDER_RADIUS);
 
@@ -59,12 +60,20 @@ export class GlitchBossActor extends ex.Actor {
     this.graphics.use(this.glitchCanvas);
   }
 
+  /**
+   * Excalibur does not run health `onDeath` when the actor is removed via `kill()` (e.g. room unload).
+   * Without this, `glitchRegistry` keeps a stale toward-boss vector and movement stays blocked off-room.
+   */
+  onPreKill(_scene: ex.Scene): void {
+    this.clearGlitchFromAllPlayers();
+  }
+
   onInitialize(_engine: ex.Engine): void {
     this.on('collisionstart', (evt) => {
       const other = evt.other as ex.Actor & { isBullet?: boolean; damage?: number };
       if (other.isBullet) {
         // Damage scales with player proximity — closer shots deal more damage
-        const dist  = this.playerRef.pos.distance(this.pos);
+        const dist  = this.minDistToAnyPlayer();
         const scale = GLITCH_BOSS.DAMAGE_MIN_SCALE +
           (1 - GLITCH_BOSS.DAMAGE_MIN_SCALE) *
           Math.max(0, 1 - dist / GLITCH_BOSS.DAMAGE_MAX_DIST);
@@ -92,8 +101,9 @@ export class GlitchBossActor extends ex.Actor {
     // Cycle arrow color
     this.colorPhase += GLITCH_BOSS.COLOR_CYCLE_SPEED * dt;
 
-    // Retreat: move away from player, with wall avoidance to prevent cornering
-    const toPlayer = this.playerRef.pos.sub(this.pos);
+    // Retreat: move away from nearest player, with wall avoidance to prevent cornering
+    const targetPos = this.closestPlayerPos();
+    const toPlayer = targetPos.sub(this.pos);
     const dist      = toPlayer.size;
 
     // Base flee direction: directly away from player
@@ -123,41 +133,78 @@ export class GlitchBossActor extends ex.Actor {
       Math.max(INNER.T, Math.min(INNER.B, this.pos.y)),
     );
 
-    // Evaluate cone and update glitch registry
-    this.updateGlitch(dist);
+    // Evaluate cone and update glitch registry for each player
+    this.updateGlitchPerPlayer();
   }
 
-  private updateGlitch(distToPlayer: number): void {
-    const player = this.playerRef as PlayerRef;
-    if (!player.glitchRegistry) return;
+  /** Returns true if this player is inside the glitch cone (registry updated accordingly). */
+  private applyGlitchConeToPlayer(playerPos: ex.Vector, player: PlayerRef): boolean {
+    if (!player.glitchRegistry) return false;
 
+    const distToPlayer = playerPos.distance(this.pos);
     if (distToPlayer < 1) {
       player.glitchRegistry.delete(this);
-      this.isGlitching = false;
-      return;
+      return false;
     }
 
-    // Cone half-angle widens as player gets closer
     const t = Math.max(0, 1 - distToPlayer / GLITCH_BOSS.CONE_MAX_DIST);
     const halfAngle = GLITCH_BOSS.CONE_BASE_HALF +
       (GLITCH_BOSS.CONE_MAX_HALF - GLITCH_BOSS.CONE_BASE_HALF) * t;
 
-    // Angle from boss to player
-    const toPlayer  = this.playerRef.pos.sub(this.pos);
+    const toPlayer = playerPos.sub(this.pos);
     const angleToPlayer = Math.atan2(toPlayer.y, toPlayer.x);
     let diff = angleToPlayer - this.arrowAngle;
-    diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI; // normalize to [-π, π]
+    diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
 
     const inCone = Math.abs(diff) <= halfAngle;
-    this.isGlitching = inCone;
-
     if (inCone) {
-      // Register approach-block direction (unit vector from player toward boss)
-      const towardBoss = this.pos.sub(this.playerRef.pos).normalize();
+      const towardBoss = this.pos.sub(playerPos).normalize();
       player.glitchRegistry.set(this, towardBoss);
     } else {
       player.glitchRegistry.delete(this);
     }
+    return inCone;
+  }
+
+  private updateGlitchPerPlayer(): void {
+    const scene = this.scene;
+    if (!scene) {
+      const p = this.pickTargetPlayer(this.pos) as PlayerRef;
+      this.isGlitching = this.applyGlitchConeToPlayer(p.pos, p);
+      return;
+    }
+
+    let anyInCone = false;
+    for (const child of scene.actors) {
+      const pl = child as PlayerRef;
+      if (!pl.isPlayer) continue;
+      if (this.applyGlitchConeToPlayer(pl.pos, pl)) anyInCone = true;
+    }
+    this.isGlitching = anyInCone;
+  }
+
+  private clearGlitchFromAllPlayers(): void {
+    const scene = this.scene;
+    if (scene) {
+      for (const child of scene.actors) {
+        const pl = child as PlayerRef;
+        if (pl.isPlayer) pl.glitchRegistry?.delete(this);
+      }
+    } else {
+      (this.pickTargetPlayer(this.pos) as PlayerRef).glitchRegistry?.delete(this);
+    }
+  }
+
+  private minDistToAnyPlayer(): number {
+    const scene = this.scene;
+    if (!scene) return this.pickTargetPlayer(this.pos).pos.distance(this.pos);
+    let best = Infinity;
+    for (const child of scene.actors) {
+      const a = child as ex.Actor & { isPlayer?: boolean };
+      if (!a.isPlayer) continue;
+      best = Math.min(best, a.pos.distance(this.pos));
+    }
+    return best === Infinity ? this.pickTargetPlayer(this.pos).pos.distance(this.pos) : best;
   }
 
   private onDamage(_healthRatio: number, damage: number): void {
@@ -166,8 +213,7 @@ export class GlitchBossActor extends ex.Actor {
   }
 
   private onDeath(): void {
-    // Clean up glitch registry
-    (this.playerRef as PlayerRef).glitchRegistry?.delete(this);
+    this.clearGlitchFromAllPlayers();
     GameEvents.emit('enemy:died', { points: GLITCH_BOSS.POINT_VALUE, x: this.pos.x, y: this.pos.y });
     this.spawnFragments();
     this.kill();
@@ -182,8 +228,9 @@ export class GlitchBossActor extends ex.Actor {
 
   private closestPlayerPos(): ex.Vector {
     const scene = this.scene;
-    if (!scene) return this.playerRef.pos;
-    let best = this.playerRef.pos;
+    const fallback = this.pickTargetPlayer(this.pos).pos;
+    if (!scene) return fallback;
+    let best = fallback;
     let bestD = Infinity;
     for (const child of scene.actors) {
       const a = child as ex.Actor & { isPlayer?: boolean };

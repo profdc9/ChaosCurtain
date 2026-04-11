@@ -126,7 +126,7 @@ Most threats are **contact-based** (body vs player). **Exceptions in code:** **B
 - **Collision damage:** Light
 - **Destruction:** When a worm that cannot split further is depleted, its two circles and line fly apart with the burning fragment animation
 - **Implementation notes:**
-  - Constructor takes `health`, `splitsLeft` (1 = splits once, 2 = splits twice), and `registerEnemy` callback
+  - Constructor takes `pickTargetPlayer`, `health`, `splitsLeft` (1 = splits once, 2 = splits twice), and `registerEnemy` callback
   - First hit triggers `doSplit()` instead of damage if `splitsLeft > 0`; emits `enemy:died` with 0 points to decrement `_liveCount` without awarding score; two offspring registered via callback
   - Offspring each start with parent's current HP / 2; initial velocity perpendicular to parent velocity (one each way)
   - Post-split worms steer toward player with `TURN_RATE`; `splitsLeft - 1` passed to offspring
@@ -168,6 +168,24 @@ Boss enemies differ from regular enemies in the following ways:
 - Health is ~10× that of ordinary enemies (tunable per boss)
 - Each boss has unique movement patterns, geometry, and special traits
 
+### Co-op player targeting ✓ implemented
+
+When two ships are in play, bosses (and the **Worm**) react to **whichever player is nearer** to a reference point `from` (usually the enemy or boss position). **Single-player** is unchanged in practice: `RoomManager.pickTargetPlayer` returns only P1 and ignores `from`, so behavior matches the old pattern of holding a single spawn-time `playerRef`.
+
+- **`RoomManager.pickTargetPlayer(from)`** — No P2: always `this.player`. With P2: returns the ship whose `pos` is closer to `from` (equal distance picks P1).
+
+- **`SpawnerActor`** wires **`(from) => this.pickTargetPlayer(from)`** into actors that need live targeting. Enemies that still take a **one-shot** `target` at spawn (Dart, Wrangler, Satellite, Blaster) use `pickTargetPlayer(this.pos)` once from the **spawner** position only; they have not been converted to continuous re-targeting.
+
+**Implemented dynamic targeting**
+
+| Actor | What changed |
+|-------|----------------|
+| **Worm** | Constructor takes `pickTargetPlayer`; head steers toward nearest ship each frame (split children inherit the same callback). |
+| **Bird boss** | `enterCharge` aims at `pickTargetPlayer(this.pos).pos` when the charge begins (no longer a fixed spawn-time player). |
+| **Snake boss** | Orbit center and ram vector use nearest player each update / ram start. |
+| **Zapsphere** | Danger ring and dwell use **min** distance to any player; bullet damage boost uses min distance. On lightning, **each** player inside the danger radius takes damage and gets a `LightningBoltActor`; `zapsphere:lightning` still fires **once** per discharge for SFX. |
+| **Glitch boss** | Retreat and proximity damage use nearest / min distance as appropriate. Glitch **cone** is evaluated per player: each ship’s `glitchRegistry` is updated independently; arrow highlight if **any** ship is glitched. Death / pre-kill clears this boss from **all** players’ registries. |
+
 ### Boss — Bird ✓ implemented
 - **Geometry:** Two wing pairs (each a V shape) joined at a center-bottom point — left wing V opens lower-left, right wing V opens lower-right; an upward-pointing V connects the tops of both wings forming the head; two small circles inside the upward V as eyes; all line segments yellow, eyes light blue
 - **Animation:** Wings fan inward and outward continuously — flapping motion; faster on dive, slower on retreat
@@ -178,7 +196,7 @@ Boss enemies differ from regular enemies in the following ways:
 - **Collision damage dealt:** Heavy (to player only)
 - **Destruction:** All line segments and eye circles fly apart individually with burning fragment animation
 - **Implementation notes:**
-  - States: `flit` (erratic movement toward random room targets, charges after 1–2.5s) → `charge` (beelines to player position recorded at charge start) → `retreat` (bounces opposite to charge dir for 0.8s)
+  - States: `flit` (erratic movement toward random room targets, charges after 1–2.5s) → `charge` (beelines to **nearest** player position via `pickTargetPlayer(this.pos)`, recorded at charge start) → `retreat` (bounces opposite to charge dir for 0.8s)
   - `flapPhase` advances at `FLAP_SPEED_FLIT/CHARGE/RETREAT` (3/7/1.5 rad/s); `flapY` = base (6) + amplitude (16) * (0.5 + 0.5 * sin(phase)) drives all wing vertices each frame → `cache: false` canvas
   - Wing geometry in local space (bird points +x): tail join (-10,0); outer wing tips (-18, ±flapY); inner wing tips (2, ±flapY*0.55); head tip (18,0) — 6 segments + 2 eye circles
   - `ignoresPlayerRam = true`: PlayerActor skips `other.takeDamage` call; player still takes `collisionDamage` (30) from bird's `collisionDamage` field
@@ -190,7 +208,7 @@ Boss enemies differ from regular enemies in the following ways:
 
 ### Boss — Snake ✓ implemented
 - **Geometry:** Chain of 15–20 tangent circles (segment count tunable, to be revised once relative sizes are established); head circle contains two small eye circles; entire snake green; each segment independently shifts toward red as its own health depletes — body can show a patchwork of health states
-- **Movement:** Classic snake body-follows-head motion; attempts to encircle the player, slowly tightening a loop to trap them; once a full loop is completed around the player, the head rams toward the player; bounces back on collision (like the Bird) giving the player a brief damage window
+- **Movement:** Classic snake body-follows-head motion; attempts to encircle the **nearest** player, slowly tightening a loop to trap them; once a full loop is completed, the head rams toward that target; bounces back on collision (like the Bird) giving a brief damage window
 - **Special trait — Segmented health:**
   - Each segment has its own independent health pool
   - Head has 2× the health of regular segments
@@ -204,7 +222,7 @@ Boss enemies differ from regular enemies in the following ways:
 - **Destruction:** Disintegrating segments each fly apart as individual circles with burning fragment animation; full snake destruction produces a cascade of fragments along the entire length
 - **Implementation notes:**
   - `SnakeBossActor` (head) + 15 `SnakeSegmentActor` instances registered individually (each counts toward room live-count)
-  - States: `orbit` (circles player at `orbitRadius`, tightening at 12 px/s; transitions to ram after 4–7s or when radius hits 80px) → `ram` (beelines to player position recorded at ram start at 280px/s) → `recoil` (reverse dir for 0.7s)
+  - States: `orbit` (circles **nearest** player at `orbitRadius`, tightening at 12 px/s; transitions to ram after 4–7s or when radius hits 80px) → `ram` (beelines to nearest player position at ram start at 280px/s) → `recoil` (reverse dir for 0.7s)
   - Body-follows-head: head maintains position history ring buffer (max 400 entries); each segment i reads history at `(i+1) * step` from end where `step = round(SEGMENT_SPACING * 60 / currentSpeed)` — dynamically adapts to speed changes
   - `speedMult` increases by `SPEED_BOOST_PER_LOSS (0.06)` per dead segment, capped at 2×
   - When a segment reaches zero health: it and all tail-ward segments cascade die (each emits `enemy:died` with its point value, decrementing live count)
@@ -219,8 +237,8 @@ Boss enemies differ from regular enemies in the following ways:
 - **Geometry:** Large circle (cyan outline, not filled) with a rotating square inside (gray outline, not filled); square continuously cycles gray → white → blue → gray; all shapes outlines only — vector display consistent
 - **Movement:** Drifts slowly around the room; actively tends toward clusters of other enemies, using them as cover and forcing the player to clear fodder before getting a clean shot
 - **Special mechanic — Danger zone:**
-  - Projectiles deal significantly more damage when fired from within ~7–8 sphere lengths
-  - If the player dwells within that range too long, a jagged white lightning bolt fires from the sphere directly at the player — severe damage
+  - Projectiles deal significantly more damage when fired from within ~7–8 sphere lengths (proximity uses the **closest** ship in co-op)
+  - If **any** player dwells within that range too long, lightning fires: **each** player still inside the ring at discharge takes severe damage and gets a bolt visual
   - Dwell time before lightning fires decreases with room difficulty (low difficulty: generous window; high difficulty: very short, requires precise dart-in/dart-out timing)
   - Internal square animation accelerates and shifts as the dwell timer counts down — readable visual warning
 - **Threat:** Forces a risk/reward rhythm of closing in to deal full damage then retreating before the lightning fires; paired with other enemies the player must navigate the danger zone while dodging; a wrangler tether while in the danger zone is lethal; hides among fodder enemies to impede clean shots
@@ -230,10 +248,10 @@ Boss enemies differ from regular enemies in the following ways:
 - **Implementation notes:**
   - Canvas `cache: false` — inner square rotates and color changes every frame
   - `dwellThreshold` lerps `DWELL_THRESHOLD_EASY (3.0s)` → `DWELL_THRESHOLD_HARD (0.8s)` with difficulty
-  - `dwellTimer` increments while player within `DANGER_RADIUS (180px)`; drains at 2× rate outside
+  - `dwellTimer` increments while **any** player is within `DANGER_RADIUS (180px)` (min distance to players); drains at 2× rate outside
   - Inner square: `squareAngle` advances at `SQUARE_ROT_BASE × (1 + SQUARE_ROT_ACCEL × dwellRatio)` — spins up to 4× faster at full dwell; color snaps through gray/white/blue at similarly accelerating rate
-  - Lightning fires when `dwellTimer >= dwellThreshold` and `lightningCooldown == 0`; uses existing `LightningBoltActor`; 2s cooldown between shots
-  - Bullet damage boost: in `collisionstart`, if player is within `DANGER_RADIUS`, applies `DAMAGE_MULTIPLIER (2.5×)` to bullet damage before passing to `healthComp`
+  - Lightning fires when `dwellTimer >= dwellThreshold` and `lightningCooldown == 0`; one `LightningBoltActor` per struck player; 2s cooldown after an attempt; uses existing `LightningBoltActor`
+  - Bullet damage boost: in `collisionstart`, if **any** player is within `DANGER_RADIUS` (min distance), applies `DAMAGE_MULTIPLIER (2.5×)` to bullet damage before passing to `healthComp`
   - Cluster movement: scans `engine.currentScene.actors` every 0.5s to find centroid of all other live enemies; drifts toward it at `DRIFT_SPEED (60px/s)`; falls back to room-center drift when alone
   - Placed in 3rd-hardest non-exit room; 800 HP, 2500 pts
 
@@ -242,14 +260,14 @@ Boss enemies differ from regular enemies in the following ways:
 ### Boss — GlitchBoss ✓ implemented *(most difficult; placed closest to exit)*
 - **Geometry:** Square box (outline only) containing an arrow that can point in any direction; arrow color cycles randomly between green, blue, gray, and white (never red — reserved for damage indication); all outlines only
 - **Animation:** Arrow rotates at a constant slow speed with random direction changes — player cannot predict or time a fixed spin cycle
-- **Movement:** Retreats to maintain distance from the player; moves slower than the player's maximum speed so the gap can be closed, but the glitch mechanic complicates doing so
+- **Movement:** Retreats to maintain distance from the **nearest** player; moves slower than the player's maximum speed so the gap can be closed, but the glitch mechanic complicates doing so
 - **Special mechanic — Glitch cone:**
   - Projects an invisible cone centered on itself, aligned with the arrow direction
-  - If the player is within the cone, they are glitched — any movement that would decrease distance to the GlitchBoss is blocked; lateral and retreating movement remain free
+  - If a player is within the cone, **that** ship is glitched — any movement that would decrease distance to the GlitchBoss is blocked; lateral and retreating movement remain free (each co-op ship has its own `glitchRegistry` entry)
   - Cone angle widens as the player gets closer — at long range narrow and easy to step out of; at close range nearly any approach direction is blocked
   - Player escapes the glitch by moving away until the arrow rotates to point elsewhere
   - Cone is invisible — its geometry is learned through experience, adding a layer of skill expression
-  - **Glitch feedback:** When actively glitching a player, the arrow pulses brightly — confirms the glitch state without revealing cone geometry
+  - **Glitch feedback:** When actively glitching **any** player, the arrow pulses brightly — confirms the glitch state without revealing cone geometry
 - **Damage scaling:** Damage dealt to the GlitchBoss scales with proximity — closer shots deal significantly more damage; rewards precise, aggressive play during approach windows
 - **Threat:** Hardest boss in the game; retreating movement plus widening invisible cone makes sustained close-range combat nearly impossible; player must read arrow direction, wait for a window, dash in to fire, retreat before the cone catches them; other room enemies create pressure during waiting phases; wrangler tether while glitched is near-lethal; one per room
 - **Health:** ~10× ordinary enemy baseline
@@ -259,9 +277,9 @@ Boss enemies differ from regular enemies in the following ways:
   - Canvas `cache: false` — arrow angle changes every frame
   - Arrow rotates at `arrowSpeed` (random magnitude `ARROW_SPEED_MIN–MAX`, random sign CW/CCW); speed picks a new random value every `ARROW_CHANGE_MIN–MAX (1–3s)`
   - Arrow color cycles through green/blue/gray/white (never red) at `COLOR_CYCLE_SPEED (0.5 states/s)`; pulses white and thickens when actively glitching
-  - Retreat: velocity = `normalize(player - boss) × -RETREAT_SPEED (100px/s)` each frame
-  - **Glitch cone**: half-angle = `CONE_BASE_HALF (0.30rad) + (CONE_MAX_HALF (1.35rad) - base) × (1 - dist/CONE_MAX_DIST (420px))`; player is in cone if angle-to-player differs from arrowAngle by less than halfAngle
-  - When in cone: registers `towardBoss` unit vector into `player.glitchRegistry` (new Map on PlayerActor, parallel to `pullRegistry`); PlayerActor zeroes out any velocity component with positive dot product toward boss each frame
-  - When out of cone or boss dies: removes entry from registry
-  - **Proximity damage scaling**: bullet damage × `(DAMAGE_MIN_SCALE + (1-MIN_SCALE) × max(0, 1 - dist/DAMAGE_MAX_DIST (500px)))`; far shots deal 15% damage, point-blank deals 100%
+  - Retreat: velocity = `normalize(closestPlayerPos - boss) × -RETREAT_SPEED (100px/s)` each frame
+  - **Glitch cone**: half-angle = `CONE_BASE_HALF (0.30rad) + (CONE_MAX_HALF (1.35rad) - base) × (1 - dist/CONE_MAX_DIST (420px))` per player; in cone if angle from boss to **that** ship differs from `arrowAngle` by less than halfAngle
+  - When in cone: registers `towardBoss` into **that** ship’s `glitchRegistry`; PlayerActor zeroes velocity component toward boss each frame
+  - When out of cone or boss dies/pre-kill: removes this boss from **each** player’s registry so stale vectors cannot persist off-room
+  - **Proximity damage scaling**: uses **minimum** distance to any player in the bullet damage formula × `(DAMAGE_MIN_SCALE + (1-MIN_SCALE) × max(0, 1 - dist/DAMAGE_MAX_DIST (500px)))`; far shots deal 15% damage, point-blank deals 100%
   - Placed in hardest non-exit room (closest to exit); 800 HP, 3000 pts

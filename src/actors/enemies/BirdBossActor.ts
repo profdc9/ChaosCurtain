@@ -20,7 +20,7 @@ export class BirdBossActor extends ex.Actor {
   readonly collisionDamage  = BIRD_BOSS.COLLISION_DAMAGE;
 
   readonly healthComp: HealthComponent;
-  private readonly playerRef: ex.Actor;
+  private readonly pickTargetPlayer: (from: ex.Vector) => ex.Actor;
 
   private state: BirdState = 'flit';
   private stateTimer   = 0;
@@ -33,12 +33,12 @@ export class BirdBossActor extends ex.Actor {
 
   private readonly birdCanvas: ex.Canvas;
 
-  constructor(x: number, y: number, player: ex.Actor) {
+  constructor(x: number, y: number, pickTargetPlayer: (from: ex.Vector) => ex.Actor) {
     super({
       pos: ex.vec(x, y),
       collisionType: ex.CollisionType.Active,
     });
-    this.playerRef = player;
+    this.pickTargetPlayer = pickTargetPlayer;
     this.collider.useCircleCollider(BIRD_BOSS.COLLIDER_RADIUS);
 
     this.healthComp = new HealthComponent(
@@ -155,7 +155,8 @@ export class BirdBossActor extends ex.Actor {
     this.state = 'charge';
     this.stateTimer = 0;
     this.flapSpeed = BIRD_BOSS.FLAP_SPEED_CHARGE;
-    this.chargeTarget = this.playerRef.pos.clone();
+    const prey = this.pickTargetPlayer(this.pos);
+    this.chargeTarget = prey.pos.clone();
     const dir = this.chargeTarget.sub(this.pos).normalize();
     this.retreatDir = dir.negate();
   }

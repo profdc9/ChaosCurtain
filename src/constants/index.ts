@@ -19,6 +19,17 @@ export const ROOM = {
   EXTRA_LIFE_ON_CLEAR_PROB_CAP: 0.38,
 } as const;
 
+/** Main menu vector text (StrokeFont coarseness = angular, low-res CRT feel). */
+export const MENU = {
+  TITLE_SIZE: 72,
+  TITLE_COARSENESS: 8,
+  ITEM_SIZE: 30,
+  ITEM_COARSENESS: 6,
+  HINT_SIZE: 20,
+  HINT_COARSENESS: 5,
+  LINE_STEP: 48,
+} as const;
+
 // Door configuration
 export const DOOR = {
   WIDTH: 80,         // gap width in pixels
@@ -26,6 +37,11 @@ export const DOOR = {
   OPEN_SPEED: 3.0,   // progress units/sec (1 = closed → 0 = open; fully opens in ~0.33s)
   ENTRY_OFFSET: 50,  // px inside the room where the player appears after entering
   CANVAS_SIZE: 80,   // canvas square used for bar drawing
+  /** Co-op: volume from inner wall into the room — both players must enter after the door finishes opening. */
+  COOP_PASSAGE_DEPTH: 56,
+  COOP_PASSAGE_WALL_INSET: 8,
+  /** Co-op: extend passage past the inner wall into the gap / off-playfield so overshoot + return still counts. */
+  COOP_PASSAGE_EXITWARD: 360,
 } as const;
 
 // Player configuration

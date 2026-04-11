@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { GAME, ROOM, DOOR, SPAWNER } from '../constants';
+import { GAME, ROOM, DOOR, PLAYER, SPAWNER } from '../constants';
 import { PickupActor } from '../actors/PickupActor';
 import type { RoomDef, DoorDef, DoorSide } from './RoomDef';
 import { EXIT_ROOM_ID, MAZE, START_ROOM_ID } from './MazeGraph';
@@ -13,6 +13,79 @@ const OPPOSITE: Record<DoorSide, DoorSide> = {
   east: 'west',
   west: 'east',
 };
+
+/** Player circle (center + radius) vs axis-aligned rectangle (inclusive edges). */
+function circleIntersectsAabb(
+  px: number,
+  py: number,
+  r: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): boolean {
+  const nx = Math.max(x0, Math.min(px, x1));
+  const ny = Math.max(y0, Math.min(py, y1));
+  const dx = px - nx;
+  const dy = py - ny;
+  return dx * dx + dy * dy <= r * r;
+}
+
+/** Segment (ax,ay)-(bx,by) vs axis-aligned rect (inclusive), Liang–Barsky. */
+function segmentIntersectsAabb(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  rx0: number,
+  ry0: number,
+  rx1: number,
+  ry1: number,
+): boolean {
+  const xmin = Math.min(rx0, rx1);
+  const xmax = Math.max(rx0, rx1);
+  const ymin = Math.min(ry0, ry1);
+  const ymax = Math.max(ry0, ry1);
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  let u0 = 0;
+  let u1 = 1;
+
+  const clip = (p: number, q: number): boolean => {
+    if (p === 0) return q >= 0;
+    const t = q / p;
+    if (p < 0) {
+      if (t > u1) return false;
+      if (t > u0) u0 = t;
+    } else {
+      if (t < u0) return false;
+      if (t < u1) u1 = t;
+    }
+    return true;
+  };
+
+  if (!clip(-dx, ax - xmin)) return false;
+  if (!clip(dx, xmax - ax)) return false;
+  if (!clip(-dy, ay - ymin)) return false;
+  if (!clip(dy, ymax - ay)) return false;
+  return u1 >= u0;
+}
+
+/** Disk sweep: segment of circle centers vs passage rect expanded by radius (conservative capsule vs AABB). */
+function sweptDiskIntersectsPassage(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  r: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): boolean {
+  return segmentIntersectsAabb(ax, ay, bx, by, x0 - r, y0 - r, x1 + r, y1 + r);
+}
 
 /** Centre of the door gap on each wall's inner boundary. */
 function doorPos(side: DoorSide): ex.Vector {
@@ -43,6 +116,8 @@ function entryPos(side: DoorSide): ex.Vector {
 export class RoomManager {
   private readonly scene: ex.Scene;
   private readonly player: ex.Actor;
+  /** Second coop ship — same `SharedPlayerState`; null for solo. */
+  private readonly player2: ex.Actor | null;
   private roomActors: ex.Actor[] = [];
   private doors: DoorActor[] = [];
   /** Spawner machines + all live enemies they have produced. Room clears at 0. */
@@ -57,13 +132,81 @@ export class RoomManager {
   private deathReturnRoomId: string | null = null;
   private deathReturnEntranceSide: DoorSide | null = null;
 
+  /**
+   * Co-op: after an exit door finishes opening, both players must enter the passage zone
+   * before `load` runs. `doorSide` blocks other exits until then.
+   */
+  private coopPending: {
+    doorSide: DoorSide;
+    targetDef: RoomDef;
+    entranceSide: DoorSide;
+    p1Passed: boolean;
+    p2Passed: boolean;
+    /** World-space exit strip (inflated); tested each frame after movement. */
+    passageBounds: { x0: number; y0: number; x1: number; y1: number };
+  } | null = null;
+
+  /** Previous-frame player centers for swept co-op passage tests (avoids tunneling through thin band). */
+  private coopPassagePrev: { p1: ex.Vector; p2: ex.Vector } | null = null;
+
   get liveCount(): number { return this._liveCount; }
   get currentRoomId(): string { return this._currentRoomId; }
   get currentDifficulty(): number { return this._currentDifficulty; }
 
-  constructor(scene: ex.Scene, player: ex.Actor) {
+  constructor(scene: ex.Scene, player: ex.Actor, player2: ex.Actor | null = null) {
     this.scene = scene;
     this.player = player;
+    this.player2 = player2;
+  }
+
+  private pickTargetPlayer(from: ex.Vector): ex.Actor {
+    if (!this.player2) return this.player;
+    const d1 = from.distance(this.player.pos);
+    const d2 = from.distance(this.player2.pos);
+    return d1 <= d2 ? this.player : this.player2;
+  }
+
+  /**
+   * After physics/movement each frame: co-op exit requires both player **bodies** (circle colliders)
+   * to overlap an inflated passage rect. Passive trigger actors were unreliable vs update order.
+   */
+  tickCoopPassageOverlap(): void {
+    const pending = this.coopPending;
+    if (!pending?.passageBounds || !this.player2) return;
+    const b = pending.passageBounds;
+    const r = PLAYER.COLLIDER_RADIUS;
+    const prev = this.coopPassagePrev;
+
+    const hitP1 =
+      circleIntersectsAabb(this.player.pos.x, this.player.pos.y, r, b.x0, b.y0, b.x1, b.y1) ||
+      (prev !== null &&
+        sweptDiskIntersectsPassage(
+          prev.p1.x, prev.p1.y, this.player.pos.x, this.player.pos.y, r,
+          b.x0, b.y0, b.x1, b.y1,
+        ));
+    if (hitP1) {
+      this.onCoopPassageTouch(this.player);
+    }
+
+    if (!this.coopPending) return;
+
+    const hitP2 =
+      circleIntersectsAabb(this.player2.pos.x, this.player2.pos.y, r, b.x0, b.y0, b.x1, b.y1) ||
+      (prev !== null &&
+        sweptDiskIntersectsPassage(
+          prev.p2.x, prev.p2.y, this.player2.pos.x, this.player2.pos.y, r,
+          b.x0, b.y0, b.x1, b.y1,
+        ));
+    if (hitP2) {
+      this.onCoopPassageTouch(this.player2);
+    }
+
+    if (this.coopPending) {
+      this.coopPassagePrev = {
+        p1: this.player.pos.clone(),
+        p2: this.player2.pos.clone(),
+      };
+    }
   }
 
   /**
@@ -72,6 +215,9 @@ export class RoomManager {
    * @param entranceSide The side the player enters through, or null for the start room.
    */
   load(roomDef: RoomDef, entranceSide: DoorSide | null): void {
+    this.coopPending = null;
+    this.coopPassagePrev = null;
+
     // Remove all current room actors.
     // Guard against actors that were queued via scene.add() but not yet
     // processed by Excalibur's EntityManager — calling kill() on those
@@ -110,9 +256,16 @@ export class RoomManager {
       this.spawnMachines(roomDef); // increments _liveCount for each machine placed
     }
 
-    // Position player.
+    // Position player(s).
     if (entranceSide !== null) {
-      this.player.pos = entryPos(entranceSide);
+      const base = entryPos(entranceSide);
+      if (this.player2) {
+        this.player.pos = base.add(ex.vec(-34, 0));
+        this.player2.pos = base.add(ex.vec(34, 0));
+        this.player2.vel = ex.Vector.Zero;
+      } else {
+        this.player.pos = base;
+      }
       this.player.vel = ex.Vector.Zero;
     }
 
@@ -306,17 +459,97 @@ export class RoomManager {
         doorPos(doorDef.side),
         isEntrance,   // startOpen: entry door animates closed; exits start closed
         !isEntrance,  // locked: exits locked until room cleared; entry always unlocked
-        () => this.onDoorOpened(doorDef),
+        () => this.onDoorFullyOpened(doorDef),
+        () => this.canPlayerStartOpeningDoor(doorDef),
       );
       this.doors.push(door);
       this.add(door);
     }
   }
 
-  private onDoorOpened(doorDef: DoorDef): void {
+  /** Solo: transition immediately. Co-op: arm passage bounds; `load` runs when both circles overlap the rect. */
+  private onDoorFullyOpened(doorDef: DoorDef): void {
     const targetDef = MAZE[doorDef.targetRoomId];
     if (!targetDef) return;
-    this.load(targetDef, OPPOSITE[doorDef.side]);
+
+    if (!this.player2) {
+      this.load(targetDef, OPPOSITE[doorDef.side]);
+      return;
+    }
+
+    if (this.coopPending) return;
+
+    const entranceSide = OPPOSITE[doorDef.side];
+    this.coopPending = {
+      doorSide: doorDef.side,
+      targetDef,
+      entranceSide,
+      p1Passed: false,
+      p2Passed: false,
+      passageBounds: this.coopPassageWorldBoundsInflated(doorDef.side),
+    };
+    this.coopPassagePrev = {
+      p1: this.player.pos.clone(),
+      p2: this.player2.pos.clone(),
+    };
+  }
+
+  /** While waiting for co-op passage, only the active exit remains openable (others stay idle). */
+  private canPlayerStartOpeningDoor(doorDef: DoorDef): boolean {
+    if (!this.player2) return true;
+    if (!this.coopPending) return true;
+    return doorDef.side === this.coopPending.doorSide;
+  }
+
+  /**
+   * Inflated world AABB so both ships' circle colliders register when hugging the doorway;
+   * extends slightly past the inner wall line toward the gap (fixes “walk away then back” counting).
+   */
+  private coopPassageWorldBoundsInflated(side: DoorSide): { x0: number; y0: number; x1: number; y1: number } {
+    const pad = PLAYER.COLLIDER_RADIUS + 12;
+    const ex = DOOR.COOP_PASSAGE_EXITWARD;
+    const depth = DOOR.COOP_PASSAGE_DEPTH + pad;
+    const inset = DOOR.COOP_PASSAGE_WALL_INSET;
+    const midX = (ROOM.INNER_LEFT + ROOM.INNER_RIGHT) / 2;
+    const midY = (ROOM.INNER_TOP + ROOM.INNER_BOTTOM) / 2;
+    const gw = DOOR.WIDTH + 2 * pad;
+
+    switch (side) {
+      case 'north': {
+        const y0 = ROOM.INNER_TOP - pad - ex;
+        const y1 = ROOM.INNER_TOP + inset + depth;
+        return { x0: midX - gw / 2, x1: midX + gw / 2, y0, y1 };
+      }
+      case 'south': {
+        const y0 = ROOM.INNER_BOTTOM - inset - depth;
+        const y1 = ROOM.INNER_BOTTOM + pad + ex;
+        return { x0: midX - gw / 2, x1: midX + gw / 2, y0, y1 };
+      }
+      case 'west': {
+        const x0 = ROOM.INNER_LEFT - pad - ex;
+        const x1 = ROOM.INNER_LEFT + inset + depth;
+        return { x0, x1, y0: midY - gw / 2, y1: midY + gw / 2 };
+      }
+      case 'east': {
+        const x0 = ROOM.INNER_RIGHT - inset - depth;
+        const x1 = ROOM.INNER_RIGHT + pad + ex;
+        return { x0, x1, y0: midY - gw / 2, y1: midY + gw / 2 };
+      }
+    }
+  }
+
+  private onCoopPassageTouch(actor: ex.Actor): void {
+    if (!this.coopPending || !this.player2) return;
+    if (actor === this.player) this.coopPending.p1Passed = true;
+    else if (actor === this.player2) this.coopPending.p2Passed = true;
+    else return;
+
+    if (this.coopPending.p1Passed && this.coopPending.p2Passed) {
+      const { targetDef, entranceSide } = this.coopPending;
+      this.coopPending = null;
+      this.coopPassagePrev = null;
+      this.load(targetDef, entranceSide);
+    }
   }
 
   /** Re-entering a room that was already cleared: open doors, no `room:cleared` SFX. */
@@ -416,7 +649,7 @@ export class RoomManager {
           spawnDef.type,
           interval,
           roomDef.difficulty,
-          this.player,
+          (from) => this.pickTargetPlayer(from),
           (actor) => {
             this._liveCount++;
             this.add(actor);

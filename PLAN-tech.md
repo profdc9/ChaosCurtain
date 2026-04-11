@@ -30,10 +30,11 @@
 - **Left analog stick** — move
 - **Right analog stick** — aim; pushing stick past `GAMEPAD_FIRE_THRESHOLD` fires
 
-### Device Priority ✓ implemented
-- Gamepad is preferred; `InputSystem.getState()` checks `gamepad.connected` each frame and falls back to mouse+keyboard automatically
-- Radial deadzone (`GAMEPAD_DEADZONE`) with smooth rescaling applied to both sticks
-- Future: configuration screen to override device preference and test controls
+### Device assignment ✓ implemented (menu)
+- **`GameSettings`** (`src/settings/GameSettings.ts`) stores per-player **control scheme**: keyboard+mouse (at most one player) or **gamepad 1–4** (indices 0–3). Loaded at boot from **`localStorage`**; edited from **Settings** on the main menu.
+- Each **`PlayerActor`** owns an **`InputSystem`** constructed with that scheme only — there is **no** global “prefer gamepad then fall back” merge anymore.
+- Radial deadzone (`GAMEPAD_DEADZONE`) with smooth rescaling still applies to **gamepad** sticks.
+- **Not implemented:** in-menu “test controls” mini-scene; audio volume sliders in Settings (see `PLAN-ui.md`).
 
 ### Ship Rotation ✓ implemented
 - Ship rotates to face the **aim direction** when non-zero (right stick or mouse cursor)
@@ -42,4 +43,4 @@
 ### Input Abstraction ✓ implemented
 - `InputSystem` normalizes both schemes to `{ move: Vector, aim: Vector, isFiring: boolean }`
 - `PlayerActor` and all game logic are device-agnostic
-- Co-op: each `PlayerActor` will get its own `InputSystem` instance (P1 gamepad, P2 mouse+keyboard, or both gamepad)
+- Co-op: each `PlayerActor` has its own `InputSystem` instance; schemes are whatever the player chose (e.g. P1 gamepad, P2 mouse+keyboard, or both gamepad).

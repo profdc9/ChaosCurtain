@@ -15,13 +15,18 @@ const INNER = {
   B: ROOM.INNER_BOTTOM- 30,
 };
 
+type PlayerActor = ex.Actor & {
+  isPlayer?: boolean;
+  sharedState?: { applyDamage: (n: number) => void };
+};
+
 export class ZapsphereActor extends ex.Actor {
   readonly isEnemy       = true;
   readonly enemyName     = 'Zapsphere';
   readonly collisionDamage = ZAPSPHERE.COLLISION_DAMAGE;
 
   readonly healthComp: HealthComponent;
-  private readonly playerRef: ex.Actor;
+  private readonly pickTargetPlayer: (from: ex.Vector) => ex.Actor;
   private readonly dwellThreshold: number;
 
   private squareAngle  = 0;
@@ -34,13 +39,13 @@ export class ZapsphereActor extends ex.Actor {
 
   private readonly zapsCanvas: ex.Canvas;
 
-  constructor(x: number, y: number, player: ex.Actor, difficulty: number) {
+  constructor(x: number, y: number, pickTargetPlayer: (from: ex.Vector) => ex.Actor, difficulty: number) {
     super({
       pos: ex.vec(x, y),
       collisionType: ex.CollisionType.Active,
     });
 
-    this.playerRef = player;
+    this.pickTargetPlayer = pickTargetPlayer;
     this.dwellThreshold =
       ZAPSPHERE.DWELL_THRESHOLD_EASY +
       difficulty * (ZAPSPHERE.DWELL_THRESHOLD_HARD - ZAPSPHERE.DWELL_THRESHOLD_EASY);
@@ -68,7 +73,7 @@ export class ZapsphereActor extends ex.Actor {
       const other = evt.other as ex.Actor & { isBullet?: boolean; damage?: number };
       if (other.isBullet) {
         // Bullets from within the danger zone deal boosted damage
-        const playerDist = this.playerRef.pos.distance(this.pos);
+        const playerDist = this.minDistToAnyPlayer();
         const rawDamage  = other.damage ?? 0;
         const damage = playerDist <= ZAPSPHERE.DANGER_RADIUS
           ? rawDamage * ZAPSPHERE.DAMAGE_MULTIPLIER
@@ -91,9 +96,8 @@ export class ZapsphereActor extends ex.Actor {
     this.squareAngle += ZAPSPHERE.SQUARE_ROT_BASE * (1 + ZAPSPHERE.SQUARE_ROT_ACCEL * dwellRatio) * dt;
     this.colorPhase  += ZAPSPHERE.COLOR_CYCLE_BASE * (1 + ZAPSPHERE.COLOR_CYCLE_ACCEL * dwellRatio) * dt;
 
-    // Dwell tracking + proximity warning
-    const dist = this.pos.distance(this.playerRef.pos);
-    const inDanger = dist <= ZAPSPHERE.DANGER_RADIUS;
+    // Dwell tracking + proximity warning (any player inside danger ring)
+    const inDanger = this.minDistToAnyPlayer() <= ZAPSPHERE.DANGER_RADIUS;
     if (inDanger && !this.playerInDanger) {
       this.playerInDanger = true;
       GameEvents.emit('zapsphere:warning', { active: true });
@@ -101,11 +105,14 @@ export class ZapsphereActor extends ex.Actor {
       this.playerInDanger = false;
       GameEvents.emit('zapsphere:warning', { active: false });
     }
-    if (dist <= ZAPSPHERE.DANGER_RADIUS) {
+    if (inDanger) {
       this.dwellTimer += dt;
       this.lightningCooldown = Math.max(0, this.lightningCooldown - dt);
       if (this.dwellTimer >= this.dwellThreshold && this.lightningCooldown <= 0) {
-        this.fireLightning(engine);
+        const struck = this.playersInDangerRadius();
+        if (struck.length > 0) {
+          this.fireLightning(engine, struck);
+        }
         this.dwellTimer = 0;
         this.lightningCooldown = ZAPSPHERE.LIGHTNING_COOLDOWN;
       }
@@ -153,13 +160,37 @@ export class ZapsphereActor extends ex.Actor {
     this.clusterTarget = sum.scale(1 / others.length);
   }
 
-  private fireLightning(engine: ex.Engine): void {
-    const ps = (this.playerRef as ex.Actor & {
-      sharedState?: { applyDamage: (n: number) => void };
-    }).sharedState;
-    ps?.applyDamage(ZAPSPHERE.LIGHTNING_DAMAGE);
-    engine.currentScene.add(new LightningBoltActor(this.pos.clone(), this.playerRef.pos.clone()));
+  private fireLightning(engine: ex.Engine, targets: ex.Actor[]): void {
+    for (const t of targets) {
+      const ps = (t as PlayerActor).sharedState;
+      ps?.applyDamage(ZAPSPHERE.LIGHTNING_DAMAGE);
+      engine.currentScene.add(new LightningBoltActor(this.pos.clone(), t.pos.clone()));
+    }
     GameEvents.emit('zapsphere:lightning', {});
+  }
+
+  private allPlayerActors(): ex.Actor[] {
+    const scene = this.scene;
+    if (!scene) return [this.pickTargetPlayer(this.pos)];
+    const list: ex.Actor[] = [];
+    for (const child of scene.actors) {
+      const a = child as PlayerActor;
+      if (a.isPlayer) list.push(a);
+    }
+    return list.length > 0 ? list : [this.pickTargetPlayer(this.pos)];
+  }
+
+  private minDistToAnyPlayer(): number {
+    let best = Infinity;
+    for (const a of this.allPlayerActors()) {
+      best = Math.min(best, a.pos.distance(this.pos));
+    }
+    return best === Infinity ? this.pickTargetPlayer(this.pos).pos.distance(this.pos) : best;
+  }
+
+  private playersInDangerRadius(): ex.Actor[] {
+    const r = ZAPSPHERE.DANGER_RADIUS;
+    return this.allPlayerActors().filter((a) => a.pos.distance(this.pos) <= r);
   }
 
   private onDamage(_healthRatio: number, damage: number): void {

@@ -2,18 +2,25 @@
 
 ## Co-op System
 
-**Current code:** `GameplayScene` constructs **one** `PlayerActor` (`SharedPlayerState` is already shared-state shaped for two players later). Co-op door / transition rules below are **design** — not implemented until a second ship exists.
+**Current code:** `GameplayScene` reads **`getGameSettings()`** (`src/settings/GameSettings.ts`). With **two players**, it constructs **two** `PlayerActor` instances (P1 light blue, P2 light green per `PLAYER.COLOR_*`) that **share one** `SharedPlayerState` — same health pool, fleet, upgrades, score, and panic. Each ship has its own **`InputSystem`** bound to the menu-assigned **control scheme** (keyboard+mouse at most once across both; otherwise distinct gamepad indices). `RoomManager` accepts an optional second player; **`SpawnerActor`** resolves the **nearest** ship when spawning so homing / tether / boss logic targets one ref per spawn.
 
 ### Players
-- 1 or 2 players
+- 1 or 2 players (chosen in **Settings** on the main menu)
 - Player 1: light blue ship
 - Player 2: light green ship
 
-### Room Transition (Co-op)
-- Both players must exit through the same door
-- First player to reach the door enters a waiting state on the other side
-- Room transition triggers only when both players have passed through
-- Room state does not change until both players have exited
+### Room Transition (Co-op) ✓ implemented
+
+**Design (from spec):**
+- Both players must exit through the **same** door for that transition
+- Room transition triggers only when **both** have passed through
+- Room state does not change until then (no `load` of the next room until both qualify)
+
+**What the code does (`RoomManager` + `DoorActor` + `GameplayScene.onPostUpdate` → `tickCoopPassageOverlap`):**
+- **Solo:** unchanged — first touch opens the door; when the bar finishes opening, **`load(targetRoom, entrance)`** runs immediately.
+- **Co-op:** the **first** player to touch an unlocked exit starts the door opening. When the bar finishes, an **inflated world-space passage rectangle** is stored on `RoomManager` (see `coopPassageWorldBoundsInflated`). **`load` does not run yet.** Each frame after movement, **`tickCoopPassageOverlap`** tests each ship’s **circle collider** vs that rect (`GameplayScene.onPostUpdate`). When **both** overlap (order free; flags are **sticky**), **`load`** runs and both ships are placed at the new room’s entrance offsets.
+- While waiting for the second player, **other exits cannot start opening** (`canPlayerStartOpeningDoor` is false for every door except the side already committed in `coopPending`). The first player can stand in the passage / doorway area (“waiting on the other side” of the wall line) without changing rooms until the partner arrives.
+- **Implementation detail:** there is no separate physics “limbo room”; the next room is still loaded only after both qualify, as above.
 
 ### Shared Health & Lives
 - Single shared health bar drawn from by either player taking damage
@@ -24,7 +31,7 @@
 - System is identical for single player (no special casing)
 
 ### Death & Respawn
-- When health depletes: both players respawn at the door they entered from
+- When health depletes: **both** player actors use **`setFleetLossFrozen`** during the fragment delay, then **`respawnAfterFleetLoss`** reloads the prior room and repositions **both** ships at the entrance when co-op is active
 - If in an uncleared room: room resets on respawn
 - If in a cleared room: respawn at the entry door, health restored
 

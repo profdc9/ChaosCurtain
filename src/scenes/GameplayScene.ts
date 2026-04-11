@@ -4,7 +4,6 @@ import { SharedPlayerState } from '../state/SharedPlayerState';
 import { PlayerActor } from '../actors/PlayerActor';
 import { HUD } from '../ui/HUD';
 import { DebugOverlay } from '../ui/DebugOverlay';
-import { StartScreenOverlay } from '../ui/StartScreenOverlay';
 import { GameEvents } from '../utils/GameEvents';
 import { RoomManager } from '../rooms/RoomManager';
 import { PickupActor } from '../actors/PickupActor';
@@ -12,11 +11,8 @@ import { EXIT_ROOM_ID, MAZE, START_ROOM_ID, resetMazeGraph } from '../rooms/Maze
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
 import type { PickupType } from '../types/GameTypes';
-import { AudioManager } from '../audio/AudioManager';
-import { ZzfxSoundBank } from '../audio/ZzfxSoundBank';
-import { ZzfxSfxSystem } from '../audio/ZzfxSfxSystem';
-import { ZzfxmMusicPlayer } from '../audio/ZzfxmMusicPlayer';
-import { musicJumpSong } from '../audio/songs/musicJumpSong';
+import { isGameAudioPrepared } from '../audio/prepareGameAudio';
+import { damageScaleForDifficulty, getGameSettings } from '../settings/GameSettings';
 import { spawnPlayerDeathFragments } from '../utils/spawnPlayerDeathFragments';
 
 /** Seconds between pickup spawns (randomised each time). */
@@ -29,8 +25,8 @@ const PICKUP_SPAWN_MARGIN = 80;
 export class GameplayScene extends ex.Scene {
   private sharedState!: SharedPlayerState;
   private roomManager!: RoomManager;
-  private startOverlay!: StartScreenOverlay;
   private playerActor!: PlayerActor;
+  private playerActor2: PlayerActor | null = null;
 
   // ── Pickup spawn timer ─────────────────────────────────────────────────────
   private pickupTimer    = 0;
@@ -47,31 +43,12 @@ export class GameplayScene extends ex.Scene {
   onInitialize(engine: ex.Engine): void {
     this.sharedState = new SharedPlayerState();
 
-    // ── Audio ────────────────────────────────────────────────────────────────
-    AudioManager.init();
-    ZzfxSoundBank.buildAll();
-    if (DebugConfig.enableSfx !== false) {
-      new ZzfxSfxSystem();
+    if (!isGameAudioPrepared()) {
+      console.warn('[Audio] GameplayScene started without menu audio prep; SFX/BGM may be silent until refresh.');
     }
 
-    // ── Start-screen overlay ─────────────────────────────────────────────────
-    this.startOverlay = new StartScreenOverlay();
-    this.add(this.startOverlay);
-
-    // First user gesture: resume AudioContext AND dismiss the start screen.
-    const onStart = async () => {
-      this.startOverlay.dismiss();
-      try {
-        await AudioManager.unlock();
-        if (DebugConfig.enableMusic !== false) {
-          queueMicrotask(() => ZzfxmMusicPlayer.start(musicJumpSong));
-        }
-      } catch (err) {
-        console.error('[Audio] Failed to resume AudioContext:', err);
-      }
-    };
-    document.addEventListener('keydown',     onStart, { once: true });
-    document.addEventListener('pointerdown', onStart, { once: true });
+    const gameSettings = getGameSettings();
+    this.sharedState.damageScale = damageScaleForDifficulty(gameSettings.difficulty);
 
     // ── Game objects ─────────────────────────────────────────────────────────
     this.applyDebugUpgrades();
@@ -80,20 +57,52 @@ export class GameplayScene extends ex.Scene {
       this.sharedState.addScore(evt.points);
     });
 
-    const player = new PlayerActor(engine, this.sharedState);
-    this.playerActor = player;
-    this.add(player);
+    const p1 = new PlayerActor(
+      engine,
+      this.sharedState,
+      gameSettings.playerControls[0],
+      PLAYER.COLOR_P1,
+    );
+    this.playerActor = p1;
+    this.add(p1);
+
+    if (gameSettings.playerCount === 2) {
+      const p2 = new PlayerActor(
+        engine,
+        this.sharedState,
+        gameSettings.playerControls[1],
+        PLAYER.COLOR_P2,
+      );
+      this.playerActor2 = p2;
+      this.add(p2);
+      p1.pos = ex.vec(600, 390);
+      p2.pos = ex.vec(720, 390);
+    } else {
+      this.playerActor2 = null;
+    }
 
     const hud = new HUD(this.sharedState);
     this.add(hud);
 
-    this.roomManager = new RoomManager(this, player);
+    this.roomManager = new RoomManager(this, p1, this.playerActor2);
     this.roomManager.load(this.buildStartRoom(MAZE[START_ROOM_ID]), null);
 
     GameEvents.on('fleet:lost', () => {
       this.fleetDeathRoomId = this.roomManager.currentRoomId;
       this.playerActor.setFleetLossFrozen(true);
-      spawnPlayerDeathFragments(this, this.playerActor.pos, this.playerActor.rotation, this.playerActor.shipStrokeColor);
+      this.playerActor2?.setFleetLossFrozen(true);
+      const fragPos = this.playerActor2
+        ? ex.vec(
+          (this.playerActor.pos.x + this.playerActor2.pos.x) / 2,
+          (this.playerActor.pos.y + this.playerActor2.pos.y) / 2,
+        )
+        : this.playerActor.pos;
+      spawnPlayerDeathFragments(
+        this,
+        fragPos,
+        this.playerActor.rotation,
+        this.playerActor.shipStrokeColor,
+      );
       this.fleetRespawnTimer = PLAYER.FLEET_RESPAWN_DELAY_SEC;
     });
 
@@ -118,6 +127,7 @@ export class GameplayScene extends ex.Scene {
         this.fleetDeathRoomId = null;
         if (deathRoom) this.roomManager.respawnAfterFleetLoss(deathRoom);
         this.playerActor.setFleetLossFrozen(false);
+        this.playerActor2?.setFleetLossFrozen(false);
       }
     }
 
@@ -127,6 +137,11 @@ export class GameplayScene extends ex.Scene {
       this.pickupInterval = GameplayScene.randomPickupInterval();
       this.spawnPickup();
     }
+  }
+
+  /** After movement/physics so co-op exit passage overlap sees up-to-date player positions. */
+  onPostUpdate(_engine: ex.Engine, _delta: number): void {
+    this.roomManager.tickCoopPassageOverlap();
   }
 
   // ── Pickup spawning ────────────────────────────────────────────────────────

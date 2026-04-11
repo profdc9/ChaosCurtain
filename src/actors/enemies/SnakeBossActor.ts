@@ -21,7 +21,7 @@ export class SnakeBossActor extends ex.Actor {
   readonly collisionDamage  = SNAKE_BOSS.COLLISION_DAMAGE;
 
   readonly healthComp: HealthComponent;
-  private readonly playerRef: ex.Actor;
+  private readonly pickTargetPlayer: (from: ex.Vector) => ex.Actor;
   private readonly registerEnemy: (actor: ex.Actor) => void;
 
   private state: SnakeState = 'orbit';
@@ -45,7 +45,7 @@ export class SnakeBossActor extends ex.Actor {
   constructor(
     x: number,
     y: number,
-    player: ex.Actor,
+    pickTargetPlayer: (from: ex.Vector) => ex.Actor,
     _difficulty: number,
     registerEnemy: (actor: ex.Actor) => void,
   ) {
@@ -54,7 +54,7 @@ export class SnakeBossActor extends ex.Actor {
       collisionType: ex.CollisionType.Active,
     });
 
-    this.playerRef    = player;
+    this.pickTargetPlayer = pickTargetPlayer;
     this.registerEnemy = registerEnemy;
     this.collider.useCircleCollider(SNAKE_BOSS.COLLIDER_RADIUS_HEAD);
 
@@ -128,7 +128,8 @@ export class SnakeBossActor extends ex.Actor {
   }
 
   private updateOrbit(dt: number): void {
-    const toPlayer  = this.playerRef.pos.sub(this.pos);
+    const orbitCenter = this.pickTargetPlayer(this.pos).pos;
+    const toPlayer  = orbitCenter.sub(this.pos);
     const dist      = toPlayer.size;
     const orbitSpeed = SNAKE_BOSS.ORBIT_SPEED * this.speedMult;
 
@@ -140,7 +141,7 @@ export class SnakeBossActor extends ex.Actor {
     );
 
     // Target position on orbit circle
-    const targetPos = this.playerRef.pos.add(
+    const targetPos = orbitCenter.add(
       ex.vec(Math.cos(this.orbitAngle) * this.orbitRadius, Math.sin(this.orbitAngle) * this.orbitRadius),
     );
     const dir = targetPos.sub(this.pos);
@@ -193,7 +194,7 @@ export class SnakeBossActor extends ex.Actor {
   private enterRam(): void {
     this.state = 'ram';
     this.stateTimer = 0;
-    this.ramTarget = this.playerRef.pos.clone();
+    this.ramTarget = this.pickTargetPlayer(this.pos).pos.clone();
     const dir = this.ramTarget.sub(this.pos);
     this.recoilDir = dir.size > 0 ? dir.normalize().negate() : ex.vec(-1, 0);
   }

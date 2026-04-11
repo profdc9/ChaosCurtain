@@ -1,5 +1,6 @@
 import * as ex from 'excalibur';
 import { INPUT } from '../constants';
+import type { ControlScheme } from '../settings/GameSettings';
 
 export interface InputState {
   move: ex.Vector;
@@ -21,13 +22,13 @@ function applyDeadzone(x: number, y: number): ex.Vector {
 }
 
 /**
- * Normalises raw input from either a gamepad (preferred when connected) or
- * mouse + keyboard into a device-agnostic { move, aim, isFiring, panicPressed } state.
+ * Normalises raw input from a gamepad or mouse + keyboard into
+ * { move, aim, isFiring, panicPressed }.
  *
  * Gamepad layout (standard mapping):
  *   Left stick       → movement vector
  *   Right stick      → aim vector + fire when magnitude > GAMEPAD_FIRE_THRESHOLD
- *   Any face button  → panic (A/B/X/Y or Cross/Circle/Square/Triangle)
+ *   Any face button  → panic
  *
  * Mouse + keyboard layout:
  *   WASD / Arrow keys → movement vector
@@ -38,21 +39,46 @@ function applyDeadzone(x: number, y: number): ex.Vector {
 export class InputSystem {
   private mouseDown = false;
   private lastMouseScreenPos: ex.Vector = ex.vec(0, 0);
+  private readonly pointerDownHandler = () => { this.mouseDown = true; };
+  private readonly pointerUpHandler = () => { this.mouseDown = false; };
+  private readonly pointerMoveHandler = (evt: ex.PointerEvent) => {
+    this.lastMouseScreenPos = ex.vec(evt.screenPos.x, evt.screenPos.y);
+  };
 
-  constructor(private readonly engine: ex.Engine) {
+  constructor(
+    private readonly engine: ex.Engine,
+    private readonly scheme: ControlScheme,
+  ) {
     engine.input.gamepads.enabled = true;
+    if (scheme.kind === 'keyboard_mouse') {
+      const p = engine.input.pointers.primary;
+      p.on('down', this.pointerDownHandler);
+      p.on('up', this.pointerUpHandler);
+      p.on('move', this.pointerMoveHandler);
+    }
+  }
 
-    engine.input.pointers.primary.on('down', () => { this.mouseDown = true; });
-    engine.input.pointers.primary.on('up',   () => { this.mouseDown = false; });
-    engine.input.pointers.primary.on('move', (evt) => {
-      this.lastMouseScreenPos = ex.vec(evt.screenPos.x, evt.screenPos.y);
-    });
+  /** Detach pointer listeners when the owning player is removed (e.g. scene change). */
+  dispose(): void {
+    if (this.scheme.kind !== 'keyboard_mouse') return;
+    const p = this.engine.input.pointers.primary;
+    p.off('down', this.pointerDownHandler);
+    p.off('up', this.pointerUpHandler);
+    p.off('move', this.pointerMoveHandler);
   }
 
   getState(playerPos: ex.Vector): InputState {
-    const gp = this.engine.input.gamepads.at(0);
-    if (gp.connected) {
-      return this.getGamepadState(gp);
+    if (this.scheme.kind === 'gamepad') {
+      const gp = this.engine.input.gamepads.at(this.scheme.index);
+      if (gp.connected) {
+        return this.getGamepadState(gp);
+      }
+      return {
+        move: ex.Vector.Zero,
+        aim: ex.Vector.Zero,
+        isFiring: false,
+        panicPressed: false,
+      };
     }
     return this.getMouseKeyboardState(playerPos);
   }

@@ -10,7 +10,8 @@ export class WormActor extends ex.Actor {
   readonly collisionDamage = WORM.COLLISION_DAMAGE;
 
   readonly healthComp: HealthComponent;
-  private readonly playerRef: ex.Actor;
+  /** Each frame (and for split offspring): chase nearest human ship when co-op. */
+  private readonly pickTargetPlayer: (from: ex.Vector) => ex.Actor;
   private readonly splitsLeft: number;
   private readonly registerEnemy: (actor: ex.Actor) => void;
 
@@ -22,7 +23,7 @@ export class WormActor extends ex.Actor {
   constructor(
     x: number,
     y: number,
-    player: ex.Actor,
+    pickTargetPlayer: (from: ex.Vector) => ex.Actor,
     health: number,
     splitsLeft: number,
     registerEnemy: (actor: ex.Actor) => void,
@@ -32,7 +33,7 @@ export class WormActor extends ex.Actor {
       collisionType: ex.CollisionType.Active,
     });
 
-    this.playerRef   = player;
+    this.pickTargetPlayer = pickTargetPlayer;
     this.splitsLeft  = splitsLeft;
     this.registerEnemy = registerEnemy;
     this.phase       = Math.random() * Math.PI * 2; // stagger oscillations across worms
@@ -93,8 +94,9 @@ export class WormActor extends ex.Actor {
     // Advance oscillation phase for inchworm animation
     this.phase += WORM.OSCILLATION_SPEED * dt;
 
-    // Gradually steer toward player (same pattern as DartActor)
-    const toPlayer = this.playerRef.pos.sub(this.pos);
+    // Gradually steer toward nearest player (co-op aware via `pickTargetPlayer`)
+    const target = this.pickTargetPlayer(this.pos);
+    const toPlayer = target.pos.sub(this.pos);
     const targetAngle = Math.atan2(toPlayer.y, toPlayer.x);
     let diff = targetAngle - this.rotation;
     diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
@@ -130,7 +132,7 @@ export class WormActor extends ex.Actor {
     for (const sign of [1, -1] as const) {
       const w = new WormActor(
         this.pos.x, this.pos.y,
-        this.playerRef, offspringHealth, offspringSplits, this.registerEnemy,
+        this.pickTargetPlayer, offspringHealth, offspringSplits, this.registerEnemy,
       );
       w.vel      = perp.scale(sign * WORM.SPEED);
       w.rotation = Math.atan2(w.vel.y, w.vel.x);

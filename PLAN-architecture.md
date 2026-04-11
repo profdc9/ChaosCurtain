@@ -137,7 +137,7 @@ Live in `src/systems/` — independent of any single actor:
 
 | System | Responsibility |
 |---|---|
-| `InputSystem` ✓ | Normalizes gamepad + mouse/keyboard to movement/aim/fire/panicPressed; device-agnostic output |
+| `InputSystem` ✓ | Per-`PlayerActor` instance: normalizes **assigned** scheme (gamepad index or keyboard+mouse) to movement/aim/fire/panicPressed; device-agnostic output |
 | `MazeGenerator` ✓ | Generates room graph from seed + tunable parameters; outputs node/edge structure (`src/maze/MazeGenerator.ts`) |
 | `RoomManager` ✓ | Tracks room state (including cleared set), triggers transitions, handles room reset (`src/rooms/RoomManager.ts`) |
 | `DamageSystem` ✓ | Implemented inside `SharedPlayerState.applyDamage` — shield absorption → health → threshold → upgrade loss |
@@ -164,7 +164,7 @@ Generator produces a **room graph**:
 
 A `StrokeFont` utility class in `src/ui/`:
 - Maps each character to an array of line segment coordinates
-- Used by HUD, start overlay, debug overlay, etc. (dedicated game-over / menu scenes not built yet)
+- Used by HUD, main menu / settings, debug overlay, etc. (dedicated game-over / pause scenes still thin)
 - Defined once, used everywhere
 - Consistent with the vector display aesthetic
 
@@ -193,6 +193,6 @@ The project began from a **minimal vertical slice** (single room, one player, on
 
 ### Current `main` scope (high level)
 
-**In the tree today:** procedural maze + `RoomManager` room loads, **spawner machines** and full enemy roster, **upgrades and pickups** (scene-level pickup timer), **Web Audio + ZzFX / ZzFXM**, **start overlay** (not a full main menu), **debug overlay** + `DebugConfig` file overrides.
+**In the tree today:** procedural maze + `RoomManager` room loads, **spawner machines** and full enemy roster, **upgrades and pickups** (scene-level pickup timer), **Web Audio + ZzFX / ZzFXM**, **main menu** (`MainMenuScene` / `MainMenuScreen`) with **settings** (difficulty, 1–2 players, per-player controls; persisted in `localStorage`), **debug overlay** + `DebugConfig` file overrides.
 
-**Still thin vs design docs:** second player / co-op door rules, dedicated menu/pause/game-over scenes, kill-streak scoring and room/time bonuses, victory (`game:won`) emission, optional systems like `BulletPool`.
+**Still thin vs design docs:** dedicated **pause** / polished **game-over** scenes, kill-streak scoring and room/time bonuses, optional systems like `BulletPool`. **Co-op exit doors** — see `PLAN-combat.md` (same-door + dual passage overlap in `RoomManager.tickCoopPassageOverlap`, called from `GameplayScene.onPostUpdate`).

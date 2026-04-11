@@ -1,6 +1,10 @@
 import * as ex from 'excalibur';
 import { GameplayScene } from './scenes/GameplayScene';
+import { MainMenuScene } from './scenes/MainMenuScene';
 import { GAME } from './constants';
+import { initGameSettings } from './settings/GameSettings';
+
+initGameSettings();
 
 const game = new ex.Engine({
   width: GAME.WIDTH,
@@ -10,9 +14,9 @@ const game = new ex.Engine({
   displayMode: ex.DisplayMode.FitScreen,
 });
 
-const gameplay = new GameplayScene();
-game.addScene('gameplay', gameplay);
+game.addScene('menu', new MainMenuScene());
+game.addScene('gameplay', new GameplayScene());
 
 game.start().then(() => {
-  game.goToScene('gameplay');
+  game.goToScene('menu');
 });

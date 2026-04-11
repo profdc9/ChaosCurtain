@@ -1,5 +1,6 @@
 import * as ex from 'excalibur';
 import { PLAYER } from '../constants';
+import type { ControlScheme } from '../settings/GameSettings';
 import { InputSystem } from '../systems/InputSystem';
 import { BulletActor } from './BulletActor';
 import { SharedPlayerState } from '../state/SharedPlayerState';
@@ -25,6 +26,7 @@ export class PlayerActor extends ex.Actor {
   constructor(
     engine: ex.Engine,
     sharedState: SharedPlayerState,
+    controlScheme: ControlScheme,
     color: string = PLAYER.COLOR_P1,
   ) {
     super({
@@ -34,7 +36,7 @@ export class PlayerActor extends ex.Actor {
 
     this.shipColor = color;
     this.sharedState = sharedState;
-    this.input = new InputSystem(engine);
+    this.input = new InputSystem(engine, controlScheme);
 
     this.collider.useCircleCollider(PLAYER.COLLIDER_RADIUS);
 
@@ -45,6 +47,10 @@ export class PlayerActor extends ex.Actor {
       draw: (ctx) => this.drawShip(ctx),
     });
     this.graphics.use(this.playerCanvas);
+  }
+
+  onPreKill(_scene: ex.Scene): void {
+    this.input.dispose();
   }
 
   get shipStrokeColor(): string {

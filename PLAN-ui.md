@@ -39,14 +39,16 @@
 
 ---
 
-## Main Menu (planned)
+## Main Menu ✓ partial
 
-- Start Game
-- Choose Number of Players (1 or 2)
-- Test Controls — verify gamepad or mouse+keyboard input; see ship move and fire
-- Settings — music volume, SFX volume, control configuration
-- Quit
-- **Secret keypress** — reveals a seed entry field for the maze generator (useful for testing and sharing specific mazes)
+**Implemented in code:** `MainMenuScene` / `MainMenuScreen` — **Start Game** (runs audio prep then `goToScene('gameplay')`), **Settings** (`SettingsScreen`), **Quit** (row present; no action wired). Vector **`StrokeFont`** styling on menu copy.
+
+**Settings screen (`SettingsScreen`) today:**
+- **Difficulty** — easy / moderate / hard (maps to incoming-damage scale via `SharedPlayerState.damageScale`)
+- **Players** — one or two (two = co-op: two `PlayerActor`s, one `SharedPlayerState`; see `PLAN-combat.md`)
+- **Per-player controls** — keyboard+mouse (max once) or gamepad index per slot; persisted with other settings
+
+**Still design / not in menu yet:** Test Controls mini-scene; music / SFX volume sliders; **Secret keypress** for maze seed entry (useful for testing and sharing specific mazes)
 
 ---
 

@@ -9,7 +9,7 @@ import type { DoorSide } from '../rooms/RoomDef';
  *  - Closed + locked   → Fixed collider, full-length bar, player touch does nothing
  *  - Closed + unlocked → Fixed collider, full-length bar, player touch starts opening
  *  - Opening           → PreventCollision, bar shrinks along its long axis
- *  - Fully open        → fires onOpened() callback → room transition
+ *  - Fully open        → fires onOpened() callback → room transition (solo) or coop passage bounds arm (see `RoomManager`)
  *
  * Entry doors start fully open (bar length = 0) and immediately animate closed.
  * Once closed, the entry door is unlocked so the player can flee back.
@@ -22,6 +22,8 @@ export class DoorActor extends ex.Actor {
   private animDir = 0;
   private readonly side: DoorSide;
   private readonly onOpened: () => void;
+  /** When false (e.g. another exit is waiting for co-op passage), player touch does not start opening. */
+  private readonly canPlayerStartOpening: () => boolean;
 
   constructor(
     side: DoorSide,
@@ -29,6 +31,7 @@ export class DoorActor extends ex.Actor {
     startOpen: boolean,
     locked: boolean,
     onOpened: () => void,
+    canPlayerStartOpening: () => boolean = () => true,
   ) {
     // Actor positioned at the wall collider centre (8px inside the wall from the inner edge).
     // The graphics are offset outward so the visual bar sits on the inner wall boundary.
@@ -37,6 +40,7 @@ export class DoorActor extends ex.Actor {
     this.side = side;
     this.locked = locked;
     this.onOpened = onOpened;
+    this.canPlayerStartOpening = canPlayerStartOpening;
     this.progress = startOpen ? 0 : 1;
 
     // Box collider sized to fill the door gap × wall thickness, centred on actor.
@@ -78,7 +82,13 @@ export class DoorActor extends ex.Actor {
   onInitialize(_engine: ex.Engine): void {
     this.on('collisionstart', (evt) => {
       const other = evt.other as ex.Actor & { isPlayer?: boolean };
-      if (other.isPlayer && !this.locked && this.animDir === 0 && this.progress >= 1) {
+      if (
+        other.isPlayer &&
+        !this.locked &&
+        this.animDir === 0 &&
+        this.progress >= 1 &&
+        this.canPlayerStartOpening()
+      ) {
         this.animDir = -1;
         this.body.collisionType = ex.CollisionType.PreventCollision;
       }
