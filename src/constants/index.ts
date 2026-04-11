@@ -13,6 +13,10 @@ export const ROOM = {
   INNER_TOP: 76,
   INNER_BOTTOM: 704,
   WALL_LINE_COLOR: '#ADD8E6',
+  /** Chance of a bonus extra-life pickup after clearing a room (scaled by room difficulty). */
+  EXTRA_LIFE_ON_CLEAR_BASE: 0.04,
+  EXTRA_LIFE_ON_CLEAR_PER_DIFF: 0.14,
+  EXTRA_LIFE_ON_CLEAR_PROB_CAP: 0.38,
 } as const;
 
 // Door configuration
@@ -40,6 +44,13 @@ export const PLAYER = {
   COLLISION_DAMAGE_TO_ENEMY: 5,
   /** Multiplier on all incoming player damage. 0.25 = easy, 1.0 = full/hard. */
   DAMAGE_SCALE: 0.25,
+  DEATH_FRAGMENT_LIFETIME_MIN: 0.75,
+  DEATH_FRAGMENT_LIFETIME_MAX: 1.45,
+  DEATH_FRAGMENT_SPEED_MIN: 95,
+  DEATH_FRAGMENT_SPEED_MAX: 220,
+  DEATH_FRAGMENT_ANGULAR_VEL_MAX: 4.0,
+  /** Seconds ship fragments fly before respawning in the previous room. */
+  FLEET_RESPAWN_DELAY_SEC: 1.05,
 } as const;
 
 // Bullet configuration

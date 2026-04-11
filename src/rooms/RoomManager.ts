@@ -1,5 +1,6 @@
 import * as ex from 'excalibur';
 import { GAME, ROOM, DOOR, SPAWNER } from '../constants';
+import { PickupActor } from '../actors/PickupActor';
 import type { RoomDef, DoorDef, DoorSide } from './RoomDef';
 import { EXIT_ROOM_ID, MAZE, START_ROOM_ID } from './MazeGraph';
 import { DoorActor } from '../actors/DoorActor';
@@ -52,6 +53,9 @@ export class RoomManager {
   private readonly clearedRooms = new Set<string>();
   /** Room definition for the last `load` (used when live count hits 0). */
   private currentRoomDef: RoomDef | null = null;
+  /** After `load`, where fleet-loss respawn sends the player (neighbor you entered this room from). */
+  private deathReturnRoomId: string | null = null;
+  private deathReturnEntranceSide: DoorSide | null = null;
 
   get liveCount(): number { return this._liveCount; }
   get currentRoomId(): string { return this._currentRoomId; }
@@ -126,6 +130,24 @@ export class RoomManager {
         }
       };
       GameEvents.on('enemy:died', this.diedHandler);
+    }
+
+    this.updateDeathReturnAnchor(roomDef, entranceSide);
+  }
+
+  /**
+   * After losing a ship while `fleet > 0`: strip cleared flag from the death room,
+   * then load the room we had entered the death room from (doors re-lock as fresh).
+   */
+  respawnAfterFleetLoss(deathRoomId: string): void {
+    this.clearedRooms.delete(deathRoomId);
+    const id = this.deathReturnRoomId;
+    const side = this.deathReturnEntranceSide;
+    const def = id ? MAZE[id] : undefined;
+    if (def) {
+      this.load(def, side);
+    } else if (MAZE[START_ROOM_ID]) {
+      this.load(MAZE[START_ROOM_ID], null);
     }
   }
 
@@ -313,12 +335,48 @@ export class RoomManager {
     if (firstClear && !emptyExit) {
       GameEvents.emit('room:cleared', {});
     }
+    if (firstClear && !emptyExit && spawnerMachines > 0) {
+      const p = Math.min(
+        ROOM.EXTRA_LIFE_ON_CLEAR_PROB_CAP,
+        ROOM.EXTRA_LIFE_ON_CLEAR_BASE + ROOM.EXTRA_LIFE_ON_CLEAR_PER_DIFF * roomDef.difficulty,
+      );
+      if (Math.random() < p) {
+        this.spawnRoomClearBonusExtraLife();
+      }
+    }
     if (roomDef.isExit && firstClear) {
       GameEvents.emit('game:won', {});
     }
     for (const door of this.doors) {
       door.unlock();
     }
+  }
+
+  private updateDeathReturnAnchor(roomDef: RoomDef, entranceSide: DoorSide | null): void {
+    if (entranceSide !== null) {
+      const door = roomDef.doors.find((d) => d.side === entranceSide);
+      if (door) {
+        this.deathReturnRoomId = door.targetRoomId;
+        this.deathReturnEntranceSide = OPPOSITE[entranceSide];
+      }
+    } else {
+      this.deathReturnRoomId = roomDef.id;
+      this.deathReturnEntranceSide = null;
+    }
+  }
+
+  /** Bonus pickup is room-owned so it is removed on the next room transition. */
+  private spawnRoomClearBonusExtraLife(): void {
+    const M = 80;
+    const x =
+      ROOM.INNER_LEFT +
+      M +
+      Math.random() * (ROOM.INNER_RIGHT - ROOM.INNER_LEFT - 2 * M);
+    const y =
+      ROOM.INNER_TOP +
+      M +
+      Math.random() * (ROOM.INNER_BOTTOM - ROOM.INNER_TOP - 2 * M);
+    this.add(new PickupActor(x, y, 'extraLife'));
   }
 
   private spawnMachines(roomDef: RoomDef): void {

@@ -1,5 +1,7 @@
 import * as ex from 'excalibur';
 
+export type FragmentBurnFrom = { r: number; g: number; b: number };
+
 export class FragmentActor extends ex.Actor {
   private elapsed = 0;
   private readonly fragmentCanvas: ex.Canvas;
@@ -12,6 +14,8 @@ export class FragmentActor extends ex.Actor {
     angularVelocity: number,
     length: number,
     private readonly lifetime: number,
+    /** When set, stroke fades from this color through yellow/orange to transparent (player wreck). */
+    private readonly burnFrom?: FragmentBurnFrom,
   ) {
     super({
       pos: ex.vec(x, y),
@@ -40,15 +44,41 @@ export class FragmentActor extends ex.Actor {
     const t = Math.min(1, this.elapsed / this.lifetime);
     const alpha = 1 - t;
 
-    // White → yellow → orange → dim red
-    const r = 255;
+    let r: number;
     let g: number;
-    if (t < 0.4) {
-      g = 255;
-    } else if (t < 0.7) {
-      g = Math.floor(255 * (1 - (t - 0.4) / 0.3));
+    let b: number;
+    if (this.burnFrom) {
+      // Ship tint → hot yellow → orange → dark, then fade via alpha
+      const br = this.burnFrom.r;
+      const bg = this.burnFrom.g;
+      const bb = this.burnFrom.b;
+      if (t < 0.35) {
+        const u = t / 0.35;
+        r = br + (255 - br) * u * 0.35;
+        g = bg + (255 - bg) * u * 0.5;
+        b = bb * (1 - u * 0.4);
+      } else if (t < 0.65) {
+        const u = (t - 0.35) / 0.3;
+        r = 255;
+        g = 200 + 55 * (1 - u);
+        b = Math.floor(bb * (1 - u));
+      } else {
+        const u = (t - 0.65) / 0.35;
+        r = 255;
+        g = Math.floor(200 * (1 - u * 0.85));
+        b = 0;
+      }
     } else {
-      g = 0;
+      // White → yellow → orange → dim red (enemy wreck)
+      r = 255;
+      if (t < 0.4) {
+        g = 255;
+      } else if (t < 0.7) {
+        g = Math.floor(255 * (1 - (t - 0.4) / 0.3));
+      } else {
+        g = 0;
+      }
+      b = 0;
     }
 
     const cx = canvasW / 2;
@@ -57,7 +87,7 @@ export class FragmentActor extends ex.Actor {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = `rgb(${r},${g},0)`;
+    ctx.strokeStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.beginPath();

@@ -19,6 +19,8 @@ export class PlayerActor extends ex.Actor {
   private fireTimer = 0;
   private readonly playerCanvas: ex.Canvas;
   private readonly shipColor: string;
+  /** During fleet-loss respawn: no input, no collisions, ship hidden. */
+  private fleetLossFrozen = false;
 
   constructor(
     engine: ex.Engine,
@@ -45,6 +47,20 @@ export class PlayerActor extends ex.Actor {
     this.graphics.use(this.playerCanvas);
   }
 
+  get shipStrokeColor(): string {
+    return this.shipColor;
+  }
+
+  /** Freeze controls/collisions while death fragments play; clears tether/glitch pulls. */
+  setFleetLossFrozen(frozen: boolean): void {
+    this.fleetLossFrozen = frozen;
+    this.body.collisionType = frozen ? ex.CollisionType.PreventCollision : ex.CollisionType.Active;
+    this.vel = ex.Vector.Zero;
+    this.pullRegistry.clear();
+    this.glitchRegistry.clear();
+    this.graphics.visible = !frozen;
+  }
+
   onInitialize(_engine: ex.Engine): void {
     this.on('collisionstart', (evt) => {
       const other = evt.other as ex.Actor & {
@@ -63,6 +79,7 @@ export class PlayerActor extends ex.Actor {
   }
 
   onPreUpdate(engine: ex.Engine, delta: number): void {
+    if (this.fleetLossFrozen) return;
     const dt = delta / 1000;
     const state = this.input.getState(this.pos);
 

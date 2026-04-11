@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { UPGRADE, ROOM, MAZE_GEN } from '../constants';
+import { PLAYER, UPGRADE, ROOM, MAZE_GEN } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { PlayerActor } from '../actors/PlayerActor';
 import { HUD } from '../ui/HUD';
@@ -17,6 +17,7 @@ import { ZzfxSoundBank } from '../audio/ZzfxSoundBank';
 import { ZzfxSfxSystem } from '../audio/ZzfxSfxSystem';
 import { ZzfxmMusicPlayer } from '../audio/ZzfxmMusicPlayer';
 import { musicJumpSong } from '../audio/songs/musicJumpSong';
+import { spawnPlayerDeathFragments } from '../utils/spawnPlayerDeathFragments';
 
 /** Seconds between pickup spawns (randomised each time). */
 const PICKUP_INTERVAL_MIN = 60;
@@ -29,10 +30,15 @@ export class GameplayScene extends ex.Scene {
   private sharedState!: SharedPlayerState;
   private roomManager!: RoomManager;
   private startOverlay!: StartScreenOverlay;
+  private playerActor!: PlayerActor;
 
   // ── Pickup spawn timer ─────────────────────────────────────────────────────
   private pickupTimer    = 0;
   private pickupInterval = GameplayScene.randomPickupInterval();
+
+  /** Countdown to `respawnAfterFleetLoss` after `fleet:lost`. */
+  private fleetRespawnTimer: number | null = null;
+  private fleetDeathRoomId: string | null = null;
 
   private static randomPickupInterval(): number {
     return PICKUP_INTERVAL_MIN + Math.random() * (PICKUP_INTERVAL_MAX - PICKUP_INTERVAL_MIN);
@@ -75,6 +81,7 @@ export class GameplayScene extends ex.Scene {
     });
 
     const player = new PlayerActor(engine, this.sharedState);
+    this.playerActor = player;
     this.add(player);
 
     const hud = new HUD(this.sharedState);
@@ -82,6 +89,13 @@ export class GameplayScene extends ex.Scene {
 
     this.roomManager = new RoomManager(this, player);
     this.roomManager.load(this.buildStartRoom(MAZE[START_ROOM_ID]), null);
+
+    GameEvents.on('fleet:lost', () => {
+      this.fleetDeathRoomId = this.roomManager.currentRoomId;
+      this.playerActor.setFleetLossFrozen(true);
+      spawnPlayerDeathFragments(this, this.playerActor.pos, this.playerActor.rotation, this.playerActor.shipStrokeColor);
+      this.fleetRespawnTimer = PLAYER.FLEET_RESPAWN_DELAY_SEC;
+    });
 
     GameEvents.on('game:won', () => {
       this.sharedState.scoreLocked = true;
@@ -96,6 +110,17 @@ export class GameplayScene extends ex.Scene {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (this.fleetRespawnTimer !== null) {
+      this.fleetRespawnTimer -= delta / 1000;
+      if (this.fleetRespawnTimer <= 0) {
+        this.fleetRespawnTimer = null;
+        const deathRoom = this.fleetDeathRoomId;
+        this.fleetDeathRoomId = null;
+        if (deathRoom) this.roomManager.respawnAfterFleetLoss(deathRoom);
+        this.playerActor.setFleetLossFrozen(false);
+      }
+    }
+
     this.pickupTimer += delta / 1000;
     if (this.pickupTimer >= this.pickupInterval) {
       this.pickupTimer    = 0;
