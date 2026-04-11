@@ -84,6 +84,7 @@ export class GameplayScene extends ex.Scene {
     this.roomManager.load(this.buildStartRoom(MAZE[START_ROOM_ID]), null);
 
     GameEvents.on('game:won', () => {
+      this.sharedState.scoreLocked = true;
       resetMazeGraph(MAZE_GEN.SEED);
       this.roomManager.clearClearedRooms();
       // Empty exit stays "cleared" so re-entering does not fire `game:won` again until other rooms are played.

@@ -27,11 +27,8 @@ export class GlitchBossActor extends ex.Actor {
   readonly healthComp: HealthComponent;
   private readonly playerRef: ex.Actor;
 
-  private arrowAngle    = Math.random() * Math.PI * 2;
-  private arrowSpeed: number;
-  private arrowChangeTimer = 0;
-  private arrowChangeDue   = 0;
-  private colorPhase    = 0;
+  private arrowAngle = 0;
+  private colorPhase = 0;
   private isGlitching   = false;
 
   private readonly glitchCanvas: ex.Canvas;
@@ -42,9 +39,7 @@ export class GlitchBossActor extends ex.Actor {
       collisionType: ex.CollisionType.Active,
     });
 
-    this.playerRef  = player;
-    this.arrowSpeed = this.randomArrowSpeed();
-    this.arrowChangeDue = this.randomArrowChangeDue();
+    this.playerRef = player;
 
     this.collider.useCircleCollider(GLITCH_BOSS.COLLIDER_RADIUS);
 
@@ -86,14 +81,13 @@ export class GlitchBossActor extends ex.Actor {
   onPreUpdate(_engine: ex.Engine, delta: number): void {
     const dt = delta / 1000;
 
-    // Rotate arrow with random speed changes
-    this.arrowAngle += this.arrowSpeed * dt;
-    this.arrowChangeTimer += dt;
-    if (this.arrowChangeTimer >= this.arrowChangeDue) {
-      this.arrowSpeed       = this.randomArrowSpeed();
-      this.arrowChangeDue   = this.randomArrowChangeDue();
-      this.arrowChangeTimer = 0;
-    }
+    // Arrow slowly tracks the bearing to the closest player (shortest rotation).
+    const target = this.closestPlayerPos();
+    const targetAngle = Math.atan2(target.y - this.pos.y, target.x - this.pos.x);
+    let turn = targetAngle - this.arrowAngle;
+    turn = ((turn + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    const maxStep = GLITCH_BOSS.ARROW_TRACKING_TURN_RATE * dt;
+    this.arrowAngle += Math.sign(turn) * Math.min(Math.abs(turn), maxStep);
 
     // Cycle arrow color
     this.colorPhase += GLITCH_BOSS.COLOR_CYCLE_SPEED * dt;
@@ -186,15 +180,21 @@ export class GlitchBossActor extends ex.Actor {
     this.actions.scaleTo(1.3, 1.3, speed, speed).scaleTo(1, 1, speed, speed);
   }
 
-  private randomArrowSpeed(): number {
-    const mag = GLITCH_BOSS.ARROW_SPEED_MIN +
-      Math.random() * (GLITCH_BOSS.ARROW_SPEED_MAX - GLITCH_BOSS.ARROW_SPEED_MIN);
-    return Math.random() < 0.5 ? mag : -mag;
-  }
-
-  private randomArrowChangeDue(): number {
-    return GLITCH_BOSS.ARROW_CHANGE_MIN +
-      Math.random() * (GLITCH_BOSS.ARROW_CHANGE_MAX - GLITCH_BOSS.ARROW_CHANGE_MIN);
+  private closestPlayerPos(): ex.Vector {
+    const scene = this.scene;
+    if (!scene) return this.playerRef.pos;
+    let best = this.playerRef.pos;
+    let bestD = Infinity;
+    for (const child of scene.actors) {
+      const a = child as ex.Actor & { isPlayer?: boolean };
+      if (!a.isPlayer) continue;
+      const d = a.pos.distance(this.pos);
+      if (d < bestD) {
+        bestD = d;
+        best = a.pos;
+      }
+    }
+    return best;
   }
 
   private spawnFragments(): void {

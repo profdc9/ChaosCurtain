@@ -250,10 +250,8 @@ export const GLITCH_BOSS = {
   CONE_BASE_HALF: 0.30,       // rad, cone half-angle at max range (narrow)
   CONE_MAX_HALF: 1.35,        // rad, cone half-angle at close range (wide)
   CONE_MAX_DIST: 420,         // distance beyond which cone is at minimum angle
-  ARROW_SPEED_MIN: 0.5,       // rad/s
-  ARROW_SPEED_MAX: 1.5,
-  ARROW_CHANGE_MIN: 1.0,      // seconds between random speed changes
-  ARROW_CHANGE_MAX: 3.0,
+  /** Max rad/s the arrow rotates toward the closest player (shortest arc). */
+  ARROW_TRACKING_TURN_RATE: 0.9,
   DAMAGE_MIN_SCALE: 0.15,     // bullet damage fraction at max distance
   DAMAGE_MAX_DIST: 500,       // beyond this, minimum damage applies
   COLOR_CYCLE_SPEED: 0.5,     // arrow color states per second

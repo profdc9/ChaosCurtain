@@ -8,6 +8,9 @@ export class SharedPlayerState {
   fleet: number;
   score: number;
 
+  /** After `game:won`, enemy kills no longer change score. */
+  scoreLocked = false;
+
   /** When true, applyDamage is a no-op. Set from DebugConfig in GameplayScene. */
   godMode = false;
   /** Multiplier on all incoming damage. 0.25 = easy, 1.0 = full/hard. */
@@ -144,6 +147,7 @@ export class SharedPlayerState {
   }
 
   addScore(points: number): void {
+    if (this.scoreLocked) return;
     this.score += points;
     GameEvents.emit('score:changed', { score: this.score });
   }
