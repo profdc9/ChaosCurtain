@@ -347,6 +347,10 @@ export const MAZE_GEN = {
   EASY_TIER: 0.33,  // difficulty < this → wanderers only
   MED_TIER:  0.66,  // difficulty < this → wanderers + light darts
                     // difficulty >= MED_TIER → wanderers + heavy darts
+  /** Minimum spawner *machines* (SpawnerActor count) placed in every non-empty room. */
+  MIN_SPAWNER_MACHINES_PER_ROOM: 3,
+  /** Pickups spawned in the exit room when the run is completed. */
+  VICTORY_PICKUP_COUNT: 20,
 } as const;
 
 // Spawner machine configuration

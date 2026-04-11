@@ -106,14 +106,23 @@ export class RoomManager {
     }
 
     if (this._liveCount === 0) {
-      this.unlockDoors();
+      if (alreadyCleared) {
+        this.openDoorsWithoutClearFanfare();
+      } else {
+        this.unlockAfterAllEnemiesGone();
+      }
     } else {
       this.diedHandler = () => {
         this._liveCount = Math.max(0, this._liveCount - 1);
-        if (this._liveCount === 0) this.unlockDoors();
+        if (this._liveCount === 0) this.unlockAfterAllEnemiesGone();
       };
       GameEvents.on('enemy:died', this.diedHandler);
     }
+  }
+
+  /** Forget which rooms were cleared (e.g. after a full maze victory). */
+  clearClearedRooms(): void {
+    this.clearedRooms.clear();
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────
@@ -274,9 +283,24 @@ export class RoomManager {
     this.load(targetDef, OPPOSITE[doorDef.side]);
   }
 
-  private unlockDoors(): void {
+  /** Re-entering a room that was already cleared: open doors, no `room:cleared` SFX. */
+  private openDoorsWithoutClearFanfare(): void {
+    for (const door of this.doors) {
+      door.unlock();
+    }
+  }
+
+  /** First time this room goes from contested → empty: fanfare once; exit room also emits `game:won`. */
+  private unlockAfterAllEnemiesGone(): void {
+    const firstClear = !this.clearedRooms.has(this._currentRoomId);
     this.clearedRooms.add(this._currentRoomId);
-    GameEvents.emit('room:cleared', {});
+    if (firstClear) {
+      GameEvents.emit('room:cleared', {});
+    }
+    const room = MAZE[this._currentRoomId];
+    if (room?.isExit && firstClear) {
+      GameEvents.emit('game:won', {});
+    }
     for (const door of this.doors) {
       door.unlock();
     }

@@ -1,5 +1,5 @@
 import * as ex from 'excalibur';
-import { UPGRADE, ROOM } from '../constants';
+import { UPGRADE, ROOM, MAZE_GEN } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { PlayerActor } from '../actors/PlayerActor';
 import { HUD } from '../ui/HUD';
@@ -8,7 +8,7 @@ import { StartScreenOverlay } from '../ui/StartScreenOverlay';
 import { GameEvents } from '../utils/GameEvents';
 import { RoomManager } from '../rooms/RoomManager';
 import { PickupActor } from '../actors/PickupActor';
-import { MAZE, START_ROOM_ID } from '../rooms/MazeGraph';
+import { MAZE, START_ROOM_ID, resetMazeGraph } from '../rooms/MazeGraph';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
 import type { PickupType } from '../types/GameTypes';
@@ -83,6 +83,12 @@ export class GameplayScene extends ex.Scene {
     this.roomManager = new RoomManager(this, player);
     this.roomManager.load(this.buildStartRoom(MAZE[START_ROOM_ID]), null);
 
+    GameEvents.on('game:won', () => {
+      resetMazeGraph(MAZE_GEN.SEED);
+      this.roomManager.clearClearedRooms();
+      this.spawnVictoryPickups(MAZE_GEN.VICTORY_PICKUP_COUNT);
+    });
+
     this.add(new DebugOverlay(this.sharedState, this.roomManager));
   }
 
@@ -105,6 +111,21 @@ export class GameplayScene extends ex.Scene {
     const y = ROOM.INNER_TOP   + PICKUP_SPAWN_MARGIN +
               Math.random() * (ROOM.INNER_BOTTOM - ROOM.INNER_TOP  - 2 * PICKUP_SPAWN_MARGIN);
     this.add(new PickupActor(x, y, type));
+  }
+
+  /** Victory celebration pickups — random types and positions. */
+  private spawnVictoryPickups(count: number): void {
+    const types: PickupType[] = [
+      'shooterType', 'weaponPower', 'shield', 'panicButton', 'health', 'extraLife',
+    ];
+    for (let i = 0; i < count; i++) {
+      const type = types[Math.floor(Math.random() * types.length)];
+      const x = ROOM.INNER_LEFT + PICKUP_SPAWN_MARGIN +
+        Math.random() * (ROOM.INNER_RIGHT - ROOM.INNER_LEFT - 2 * PICKUP_SPAWN_MARGIN);
+      const y = ROOM.INNER_TOP + PICKUP_SPAWN_MARGIN +
+        Math.random() * (ROOM.INNER_BOTTOM - ROOM.INNER_TOP - 2 * PICKUP_SPAWN_MARGIN);
+      this.add(new PickupActor(x, y, type));
+    }
   }
 
   /**

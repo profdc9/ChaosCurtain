@@ -2,6 +2,21 @@ import { SeededRandom } from '../utils/SeededRandom';
 import type { RoomDef, SpawnerDef, DoorSide, SpawnEnemyType } from '../rooms/RoomDef';
 import { MAZE_GEN } from '../constants';
 
+const { MIN_SPAWNER_MACHINES_PER_ROOM: MIN_MACHINES } = MAZE_GEN;
+
+function totalSpawnerMachines(spawners: SpawnerDef[]): number {
+  return spawners.reduce((n, s) => n + s.count, 0);
+}
+
+/** Ensure at least `min` spawner actors; pad with extra wanderer machines. */
+function ensureMinSpawnerMachines(result: SpawnerDef[], min: number): void {
+  while (totalSpawnerMachines(result) < min) {
+    const w = result.find((s) => s.type === 'wanderer');
+    if (w) w.count += 1;
+    else result.push({ type: 'wanderer', count: 1 });
+  }
+}
+
 export interface MazeResult {
   rooms: Record<string, RoomDef>;
   startRoomId: string;
@@ -48,7 +63,8 @@ function bfsDistances(
 
 /**
  * Build spawner machine definitions for a room based on difficulty (0 = easy, 1 = hardest).
- * Easy rooms get only wanderer machines; harder rooms mix in dart machines.
+ * Every room gets at least {@link MAZE_GEN.MIN_SPAWNER_MACHINES_PER_ROOM} machines.
+ * Blasters appear in all tiers with rising probability / guaranteed presence on harder rooms.
  */
 function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEnemyType): SpawnerDef[] {
   const { EASY_TIER, MED_TIER } = MAZE_GEN;
@@ -59,26 +75,51 @@ function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEn
     result.push({ type: bossType, count: 1, oneShot: true });
     result.push({ type: 'wanderer', count: 1 });
     if (difficulty >= 0.5) result.push({ type: 'dart', count: 1 });
+    if (difficulty >= 0.35 && !result.some((s) => s.type === 'blaster')) {
+      result.push({ type: 'blaster', count: 1 });
+    }
+    ensureMinSpawnerMachines(result, MIN_MACHINES);
     return result;
   }
 
   if (difficulty < EASY_TIER) {
     result.push({ type: 'wanderer', count: rng.nextInt(1, 2) });
     if (rng.nextBool(0.33)) result.push({ type: 'worm', count: 1 });
+    if (rng.nextBool(0.28)) result.push({ type: 'blaster', count: 1 });
   } else if (difficulty < MED_TIER) {
     result.push({ type: 'wanderer', count: 1 });
-    result.push({ type: 'dart',     count: 1 });
-    result.push({ type: 'worm',     count: 1 });
+    result.push({ type: 'dart', count: 1 });
+    result.push({ type: 'worm', count: 1 });
     if (rng.nextBool(0.30)) result.push({ type: 'wrangler', count: 1 });
+    result.push({ type: 'blaster', count: 1 });
   } else {
     result.push({ type: 'wanderer', count: 1 });
-    result.push({ type: 'dart',     count: rng.nextInt(1, 2) });
-    result.push({ type: 'worm',     count: 1 });
+    result.push({ type: 'dart', count: rng.nextInt(1, 2) });
+    result.push({ type: 'worm', count: 1 });
     result.push({ type: 'satellite', count: 1 });
-    if (rng.nextBool(0.25)) result.push({ type: 'blaster',  count: 1 });
+    result.push({ type: 'blaster', count: 1 });
+    if (rng.nextBool(0.55)) result.push({ type: 'blaster', count: 1 });
     if (rng.nextBool(0.45)) result.push({ type: 'wrangler', count: 1 });
   }
 
+  ensureMinSpawnerMachines(result, MIN_MACHINES);
+  return result;
+}
+
+/** Exit cell: combat finale before victory (was empty). */
+function buildExitRoomSpawners(difficulty: number, rng: SeededRandom): SpawnerDef[] {
+  const result: SpawnerDef[] = [
+    { type: 'wanderer', count: 1 },
+    { type: 'dart', count: 1 },
+    { type: 'worm', count: 1 },
+  ];
+  if (difficulty >= 0.35) result.push({ type: 'satellite', count: 1 });
+  if (difficulty >= 0.5) result.push({ type: 'wrangler', count: 1 });
+  result.push({ type: 'blaster', count: 1 });
+  if (difficulty >= 0.75 && rng.nextBool(0.5)) {
+    result.push({ type: 'blaster', count: 1 });
+  }
+  ensureMinSpawnerMachines(result, MIN_MACHINES);
   return result;
 }
 
@@ -89,7 +130,7 @@ function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEn
  * - Exit room: the cell farthest from start by graph distance (BFS)
  * - Difficulty: normalized BFS distance from exit (0.0 = far from exit = easy,
  *   1.0 = at exit = hardest)
- * - Enemy mix scales with difficulty; exit room spawns no enemies
+ * - Enemy mix scales with difficulty; exit room is a short finale (`buildExitRoomSpawners`).
  */
 export function generateMaze(seed: number, gridW: number, gridH: number): MazeResult {
   const rng = new SeededRandom(seed);
@@ -204,7 +245,7 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
       rooms[id] = {
         id,
         doors,
-        spawners: isExit ? [] : buildSpawners(difficulty, rng, bossType),
+        spawners: isExit ? buildExitRoomSpawners(difficulty, rng) : buildSpawners(difficulty, rng, bossType),
         difficulty,
         isExit,
       };

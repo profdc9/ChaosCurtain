@@ -3,7 +3,7 @@
  * Passed to `ZZFX.buildSamples` for offline baking; randomness is already 0 at index 1.
  */
 export const SFX_PRESETS = {
-  bulletFired: [, 0, 1500, , 0.1, , 5, , -15] as number[],
+  bulletFired: [0.12, 0, 1500, , 0.1, , 5, , -15] as number[],
 
   enemyHitLight: [, 0, 500, , , 0.25, , , 300, 100, , , , , , 0.5] as number[],
 
