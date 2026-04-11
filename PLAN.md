@@ -11,7 +11,7 @@
 | [PLAN-enemies.md](PLAN-enemies.md) | Enemy architecture, movement/attack behaviors, all enemy types |
 | [PLAN-weapons.md](PLAN-weapons.md) | Primary weapon, upgrades, shield, panic button, damage resolution, balance notes |
 | [PLAN-debug.md](PLAN-debug.md) | Debug menu, DebugConfig overrides, debug overlay, enemy/upgrade/pickup testing tools |
-| [PLAN-audio.md](PLAN-audio.md) | Tone.js chiptune audio, sound effects, proximity warnings, background music |
+| [PLAN-audio.md](PLAN-audio.md) | Web Audio + ZzFX SFX, ZzFXM BGM, proximity warnings (planned), DebugConfig toggles |
 | [PLAN-ui.md](PLAN-ui.md) | Menus, HUD, pause, game over/victory screens, scoring system |
 | [PLAN-architecture.md](PLAN-architecture.md) | Build tooling, project structure, scenes, entity/component design, collision, event bus, systems, vertical slice scope |
 

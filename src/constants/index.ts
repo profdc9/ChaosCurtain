@@ -107,6 +107,8 @@ export const WRANGLER = {
   APPROACH_SPEED: 90,
   DETECTION_RADIUS: 260,       // player within this → start approaching
   TETHER_RANGE: 240,           // player within this → deploy tether (6 × PLAYER.SHIP_LENGTH)
+  /** Below this separation (px), tether pull is cleared — avoids stale / jittery pull near overlap. */
+  TETHER_PULL_MIN_DIST: 4,
   PULL_FORCE: 82,              // px/sec pull applied to player toward wrangler
   HEALTH: 120,
   COLLISION_DAMAGE: 20,

@@ -109,13 +109,16 @@ export class WranglerActor extends ex.Actor {
       GameEvents.emit('wrangler:tether', { active: true });
     }
 
-    // Register pull force on player each frame while tethered
+    // Register pull on player each frame while tethered (must clear when too close — stale
+    // vectors read like gamepad drift / jitter from sub-pixel direction flips).
     if (this.isTethered) {
       const toWrangler = this.pos.sub(this.playerRef.pos);
-      if (toWrangler.size > 0) {
+      const reg = (this.playerRef as ex.Actor & { pullRegistry: Map<object, ex.Vector> }).pullRegistry;
+      if (toWrangler.size < WRANGLER.TETHER_PULL_MIN_DIST) {
+        reg.delete(this);
+      } else {
         const pull = toWrangler.normalize().scale(WRANGLER.PULL_FORCE);
-        (this.playerRef as ex.Actor & { pullRegistry?: Map<object, ex.Vector> })
-          .pullRegistry?.set(this, pull);
+        reg.set(this, pull);
       }
     }
 
@@ -145,10 +148,9 @@ export class WranglerActor extends ex.Actor {
   }
 
   /**
-   * Called for ALL kill scenarios: health death, room transition, direct kill.
-   * Cleans up pull registry and emits tether-off (idempotent via isTethered flag).
+   * Excalibur does not call `onKill` — use {@link onPreKill}. Runs for health death, room unload, any `kill()`.
    */
-  onKill(): void {
+  onPreKill(_scene: ex.Scene): void {
     (this.playerRef as ex.Actor & { pullRegistry?: Map<object, ex.Vector> })
       .pullRegistry?.delete(this);
     this.deactivateTether();
@@ -165,7 +167,7 @@ export class WranglerActor extends ex.Actor {
     this.deactivateTether();
     GameEvents.emit('enemy:died', { points: WRANGLER.POINT_VALUE, x: this.pos.x, y: this.pos.y });
     this.spawnFragments();
-    this.kill(); // → triggers onKill() which is now a safe no-op (isTethered already false)
+    this.kill(); // → onPreKill: registry + tether-off if still tethered
   }
 
   private updateColors(healthRatio: number): void {

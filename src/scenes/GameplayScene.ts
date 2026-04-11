@@ -12,8 +12,11 @@ import { MAZE, START_ROOM_ID } from '../rooms/MazeGraph';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
 import type { PickupType } from '../types/GameTypes';
-import * as Tone from 'tone';
 import { AudioManager } from '../audio/AudioManager';
+import { ZzfxSoundBank } from '../audio/ZzfxSoundBank';
+import { ZzfxSfxSystem } from '../audio/ZzfxSfxSystem';
+import { ZzfxmMusicPlayer } from '../audio/ZzfxmMusicPlayer';
+import { musicJumpSong } from '../audio/songs/musicJumpSong';
 
 /** Seconds between pickup spawns (randomised each time). */
 const PICKUP_INTERVAL_MIN = 60;
@@ -39,22 +42,26 @@ export class GameplayScene extends ex.Scene {
     this.sharedState = new SharedPlayerState();
 
     // ── Audio ────────────────────────────────────────────────────────────────
-    // SfxSystem disabled — Tone.js produces persistent stuttering under game load.
-    // See SfxSystem.ts for the full implementation (same situation as chiptune-music branch).
     AudioManager.init();
+    ZzfxSoundBank.buildAll();
+    if (DebugConfig.enableSfx !== false) {
+      new ZzfxSfxSystem();
+    }
 
     // ── Start-screen overlay ─────────────────────────────────────────────────
     this.startOverlay = new StartScreenOverlay();
     this.add(this.startOverlay);
 
-    // First user gesture: unlock Web Audio AND dismiss the start screen.
+    // First user gesture: resume AudioContext AND dismiss the start screen.
     const onStart = async () => {
       this.startOverlay.dismiss();
       try {
-        await Tone.start();
-        AudioManager.markUnlocked();
+        await AudioManager.unlock();
+        if (DebugConfig.enableMusic !== false) {
+          queueMicrotask(() => ZzfxmMusicPlayer.start(musicJumpSong));
+        }
       } catch (err) {
-        console.error('[Audio] Failed to start AudioContext:', err);
+        console.error('[Audio] Failed to resume AudioContext:', err);
       }
     };
     document.addEventListener('keydown',     onStart, { once: true });

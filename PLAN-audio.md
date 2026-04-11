@@ -1,85 +1,92 @@
 # ChaosCurtain — Audio
 
-## Status: ON HOLD
+## Status: ACTIVE (Web Audio + ZzFX / ZzFXM)
 
-Both the music system and the SFX system have been implemented but disabled due to the same unresolved Tone.js issue: persistent audio stuttering (rapid on/off artefacts at ~10 Hz) that begins under normal game load and does not stop. Diagnostics confirmed the Tone.js scheduler is healthy (lag stable at −0.100 s); the root cause is likely total AudioNode count overwhelming the Web Audio render thread.
+Tone.js was removed from the main branch. Audio uses a **single `AudioContext`**, separate **music** and **SFX** gain buses (`AUDIO.MUSIC_VOLUME_DB` / `AUDIO.SFX_VOLUME_DB`), and **no live synthesis graph** for SFX (avoids the old Tone.js node-count / stutter issues).
 
-**All audio is currently silent.** The implementations are preserved in source for future revival.
+| Piece | Role |
+|--------|------|
+| `AudioManager` | Creates context, `musicGainNode`, `sfxGainNode`; `unlock()` after first user gesture (`GameplayScene` start overlay). |
+| `ZzfxSoundBank` | One-time bake: `ZZFX.buildSamples` from `zzfxPresets.ts` → `Float32Array` per cue. |
+| `ZzfxSfxSystem` | Subscribes to `GameEvents`; plays one-shots via `AudioBufferSourceNode` → `sfxGainNode`. |
+| `ZzfxmMusicPlayer` | Renders ZzFXM song data (`zzfxmRender.ts`) → stereo buffer → looping source → `musicGainNode`. |
+| `src/audio/songs/music-jump.js` | Default BGM (converted MOD → ZzFXM); re-exported from `musicJumpSong.ts`. |
 
-### Recommended path forward
-
-Pre-render all sounds to short OGG/MP3 clips and play them via `HTMLAudioElement` or raw Web Audio `AudioBufferSourceNode`, bypassing Tone.js's synthesis graph entirely. This avoids the node-count overhead that causes the stuttering.
-
----
-
-## Technology (current, non-functional)
-
-- **Tone.js** for all synthesis — chiptune aesthetic using square/sawtooth oscillators and noise
-- `AudioManager` owns two master `Tone.Volume` nodes: `musicVol` and `sfxVol` (independently adjustable)
-- Audio context unlock on first user gesture (keydown / pointerdown) via `Tone.start()` — browser autoplay policy
+**DebugConfig:** `enableSfx`, `enableMusic` — set to `false` to mute either bus.
 
 ---
 
-## Background Music — Status: Deferred (branch `chiptune-music`)
+## Background music
 
-- MIDI playback via `Tone.Transport` + `PolySynth` implemented and archived on branch **`chiptune-music`**
-- Root cause of choppiness: some MIDI tracks require up to 8 simultaneous voices; `PolySynth` voice scheduling degrades under sustained polyphony load — not resolved
-- Music playback removed from main branch
-
----
-
-## Sound Effects — Status: Deferred (`src/audio/SfxSystem.ts`)
-
-Full implementation exists in `src/audio/SfxSystem.ts` but `SfxSystem` is not instantiated in `GameplayScene`. Same stuttering issue as music. The implementation and design specs are preserved below for when audio is revisited.
+- **In use:** ZzFXM procedural track **music-jump** (looping) after audio unlock, unless `enableMusic === false`.
+- **Historical:** MIDI + `Tone.Transport` lived on branch **`chiptune-music`**; not used on `main`.
 
 ---
 
-## SFX Design Specifications
+## Sound effects
 
-### Original SFX (implemented in SfxSystem.ts)
+- **In use:** `ZzfxSfxSystem` is constructed from `GameplayScene` when `enableSfx !== false`, after `ZzfxSoundBank.buildAll()`.
+- **Presets:** `src/audio/zzfxPresets.ts` — original game `zzfx(...[, …])` sparse tuples (volume slot empty → default 1; randomness `0` for deterministic bakes).
+- **Removed from tree:** `src/audio/SfxSystem.ts`, `src/audio/MusicSystem.ts` (old Tone-based implementations).
+
+### Continuous cues (no unbounded synth nodes)
+
+| Event | Behaviour |
+|--------|-----------|
+| `wrangler:tether` | Ref-count + `setInterval` replays baked `wranglerTether` tick while any tether is active. |
+| `zapsphere:warning` | Ref-count + interval replays baked `zapWarning` while in danger. |
+
+---
+
+## SFX design specifications (design intent → current implementation)
+
+Design columns describe the original intent; implementation is **ZzFX presets** + Web Audio playback (see `zzfxPresets.ts` / `ZzfxSfxSystem.ts`).
+
+### Core cues
 
 | Event | Design spec | Implementation |
 |---|---|---|
-| `bullet:fired` | Short downward chirp on each shot | C6→C3 exponential ramp over 80 ms, square wave, −18 dB |
-| `enemy:hit` light | Pitch proportional to damage magnitude | Sawtooth synth, MIDI note 52–64 scaled to damage |
-| `enemy:hit` heavy | Short metallic clang | `PolySynth<MetalSynth>`, G3, 16th note |
-| `enemy:died` regular | 3-note descending death chirp | Square wave: A4→E4→A3, 32nd notes |
-| `enemy:died` boss (≥2000 pts) | Two chord hits, dramatic | Square PolySynth: Am → Gm chords |
-| `player:hit` | Low bass thud | `MembraneSynth` at C1, 8th note |
-| `player:upgraded` | Ascending arpeggio | Triangle wave: C5 E5 G5 C6, 32nd notes |
-| `player:downgraded` | Descending arpeggio | Triangle wave: C6 G5 E5 C5, 32nd notes |
-| `panic:deployed` | White noise burst | `NoiseSynth`, 8th note |
-| `pickup:collected` | Two-note chime | Triangle wave: C6→E6 |
-| `zapsphere:lightning` | High crackling burst | `MetalSynth` at 400 Hz, 32nd note |
+| `bullet:fired` | Short downward chirp on each shot | ZzFX tuple (tunable in `zzfxPresets`) |
+| `enemy:hit` light | Pitch proportional to damage magnitude | `enemyHitLight` vs `enemyHitHeavy` by `DAMAGE.HEAVY_HIT_THRESHOLD` |
+| `enemy:hit` heavy | Short metallic clang | `enemyHitHeavy` |
+| `enemy:died` regular | 3-note descending death chirp | `enemyDied` |
+| `enemy:died` boss (≥2000 pts) | Two chord hits, dramatic | `enemyDiedBoss` |
+| `player:hit` light / heavy | Bass thud scaling with hit severity | `playerHitLight` / `playerHitHeavy` by `DAMAGE.HEAVY_HIT_THRESHOLD` |
+| `player:upgraded` | Ascending arpeggio | `upgraded` |
+| `player:downgraded` | Descending arpeggio | `downgraded` |
+| `panic:deployed` | White noise burst | `panic` |
+| `pickup:collected` | Two-note chime | `pickup` |
+| `zapsphere:lightning` | High crackling burst | `zapLightning` |
 
-### Additional SFX (implemented in SfxSystem.ts)
+### Room / meta cues
 
 | Event | Design spec | Implementation |
 |---|---|---|
-| `room:entered` | Noise-like buzz: two alternating low tones (200 Hz / 300 Hz) alternating at 5 Hz | Square synth, 4 pulses at 0.15 s spacing |
-| `room:cleared` | Fanfare | Ascending C5-E5-G5-C6 arpeggio, then held 4-note chord |
-| `enemy:spawned` | Upward chirp 300→600 Hz | Square synth, exponential ramp over 80 ms |
-| `wrangler:tether` | Continuous sinusoidal FM hum; frequency oscillates between 150–250 Hz at 2 Hz; fades in when tether activates, fades out on death | `Tone.Oscillator` (sine, freq=0) + `Tone.LFO` (2 Hz, 150–250 Hz); gated by `Tone.Volume` node; ref-counted for multiple wranglers |
-| `zapsphere:warning` | Klaxon: two dissonant chords alternating at 2 Hz; continuous while player is inside danger radius | Square PolySynth, [E4,A#4] / [F4,B4] alternating every 500 ms via `setInterval`; ref-counted |
-| `fleet:lost` | Slow funeral march, 4–5 seconds, played when a life is lost | Square synth, C3/G2/F2 bass march, 8 notes at 0.55 s/beat |
-| `game:over` | Slow descending chromatic dirge | Sawtooth synth, C4 down to F3 chromatically over ~5 s |
-| `game:won` | Extended triumphant fanfare, ~10 seconds | Square PolySynth, two ascending runs + chords + grand 7-voice final chord over ~8 s |
+| `room:entered` | Noise-like buzz / alternating low tones | `roomEntered` |
+| `room:cleared` | Fanfare | `roomCleared` |
+| `enemy:spawned` | Upward chirp | `enemySpawned` |
+| `wrangler:tether` | Continuous hum while tethered | Baked tick + interval (not Tone oscillator graph) |
+| `zapsphere:warning` | Klaxon while in danger radius | Baked slice + interval |
+| `fleet:lost` | Funeral march feel | `fleetLost` |
+| `game:over` | Descending dirge | `gameOver` |
+| `game:won` | Triumphant fanfare | `gameWon` |
 
-### GameEvents emitted (wired but SFX disabled)
+### GameEvents (audio-related)
 
 - `room:cleared` — `RoomManager.unlockDoors()`
 - `enemy:spawned` — `SpawnerActor.spawnEnemy()`
-- `wrangler:tether { active }` — `WranglerActor.onKill()` / `onPreUpdate` (tether flip)
-- `zapsphere:warning { active }` — `ZapsphereActor.onKill()` / `onPreUpdate` (danger radius enter/exit)
+- `wrangler:tether { active }` — `WranglerActor` tether state; **cleanup on `onPreKill`** (Excalibur does not call `onKill`)
+- `zapsphere:warning { active }` — `ZapsphereActor` danger radius; **cleanup on `onPreKill`**
 - `fleet:lost` / `game:over` — `SharedPlayerState.applyDamage()` when health hits 0
+
+### Wrangler tether — player movement (2026 fix notes)
+
+- Pull is registered on `PlayerActor.pullRegistry` (per-wrangler key). **`onPreKill`** removes the key so room unload and death always clear the map (the old `onKill` hook was never invoked by Excalibur).
+- Very small separation: entry removed from registry (`TETHER_PULL_MIN_DIST`) to avoid stale vectors / jitter.
+- **Smoothed** tether pull sum on the player + **zero** smoothed vector when registry is empty so tug does not “tail” after destroy.
 
 ---
 
-## Proximity Warnings (planned, not yet implemented)
+## Proximity warnings (planned, not yet implemented)
 
-Audio cues when enemies approach critical range:
-
-- **Blaster** — warn before it reaches lightning firing range
-- **Wrangler** — warn before tether deploys
-- **Snake** — warn when head is approaching to ram
-- General low pulse increasing in frequency as any enemy reaches critical proximity
+Audio cues when enemies approach critical range (Blaster, Wrangler, Snake, general pulse) — still future work; see earlier plan bullets.

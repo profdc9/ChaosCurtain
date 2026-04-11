@@ -14,6 +14,8 @@ export class PlayerActor extends ex.Actor {
   readonly glitchRegistry = new Map<object, ex.Vector>();
 
   private readonly input: InputSystem;
+  /** Low-pass of summed tether pulls — raw pull direction flickers sub-pixel each frame and felt like stick drift. */
+  private tetherPullSmoothed = ex.Vector.Zero;
   private fireTimer = 0;
   private readonly playerCanvas: ex.Canvas;
   private readonly shipColor: string;
@@ -71,10 +73,25 @@ export class PlayerActor extends ex.Actor {
       this.vel = ex.Vector.Zero;
     }
 
-    // Apply wrangler tether pulls
-    for (const pull of this.pullRegistry.values()) {
-      this.vel = this.vel.add(pull);
+    // Apply wrangler tether pulls (smoothed — per-frame normalize() on tiny deltas is noisy)
+    if (this.pullRegistry.size === 0) {
+      this.tetherPullSmoothed = ex.Vector.Zero;
+    } else {
+      let pullSum = ex.Vector.Zero;
+      for (const pull of this.pullRegistry.values()) {
+        pullSum = pullSum.add(pull);
+      }
+      const smooth = 0.55;
+      if (pullSum.size < 0.25) {
+        this.tetherPullSmoothed = this.tetherPullSmoothed.scale(0.62);
+      } else {
+        this.tetherPullSmoothed = ex.vec(
+          this.tetherPullSmoothed.x * (1 - smooth) + pullSum.x * smooth,
+          this.tetherPullSmoothed.y * (1 - smooth) + pullSum.y * smooth,
+        );
+      }
     }
+    this.vel = this.vel.add(this.tetherPullSmoothed);
 
     // Apply GlitchBoss cone constraints — remove any velocity component directed toward a boss
     for (const towardBoss of this.glitchRegistry.values()) {

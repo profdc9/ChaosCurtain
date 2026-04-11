@@ -18,7 +18,7 @@ src/
   systems/       -- Standalone game systems
   maze/          -- Maze generation and room graph
   ui/            -- HUD, vector stroke font, UI widgets
-  audio/         -- Tone.js wrapper and sound definitions
+  audio/         -- Web Audio (AudioManager), ZzFX bake/play (ZzfxSoundBank, ZzfxSfxSystem), ZzFXM music
   constants/     -- ALL tunable values (damage, speeds, timings, point values)
   utils/         -- Shared utilities (vector math, PRNG, typed event bus)
   main.ts        -- Entry point
@@ -108,24 +108,23 @@ A single typed global `GameEvents` bus. All cross-system communication goes thro
 
 ### Event Catalog
 
-| Event | Publisher | Subscribers |
+| Event | Publisher | Subscribers (representative) |
 |---|---|---|
-| `enemy:hit` | DamageSystem | AudioManager |
-| `enemy:died` | HealthComponent | ScoreManager, RoomManager, AudioManager |
-| `player:hit` | DamageSystem | AudioManager |
-| `player:upgraded` | UpgradeManager | AudioManager, HUD |
-| `player:downgraded` | DamageSystem | AudioManager, HUD |
-| `bullet:fired` | PlayerActor | AudioManager |
-| `panic:deployed` | PlayerActor | AudioManager, ScoreManager |
-| `room:entered` | RoomManager | AudioManager, ScoreManager, HUD |
-| `room:cleared` | RoomManager | ScoreManager, AudioManager |
-| `door:opened` | RoomManager | AudioManager |
-| `door:closed` | RoomManager | AudioManager |
-| `spawn:released` | SpawnerActor | AudioManager |
-| `streak:updated` | ScoreManager | HUD |
-| `fleet:lost` | DamageSystem | AudioManager, HUD |
-| `game:over` | DamageSystem | SceneManager |
-| `game:won` | RoomManager | SceneManager |
+| `enemy:hit` | Enemy actors | `ZzfxSfxSystem`, … |
+| `enemy:died` | Enemy actors | `ZzfxSfxSystem`, `RoomManager`, … |
+| `player:hit` | `SharedPlayerState` | `ZzfxSfxSystem`, HUD, … |
+| `player:upgraded` / `player:downgraded` | `SharedPlayerState` | `ZzfxSfxSystem`, HUD |
+| `bullet:fired` | `PlayerActor` | `ZzfxSfxSystem` |
+| `panic:deployed` | `SharedPlayerState` | `ZzfxSfxSystem` |
+| `pickup:collected` | `PickupActor` | `ZzfxSfxSystem` |
+| `room:entered` / `room:cleared` | `RoomManager` | `ZzfxSfxSystem`, HUD, … |
+| `enemy:spawned` | `SpawnerActor` | `ZzfxSfxSystem` |
+| `wrangler:tether` / `zapsphere:warning` | respective actors | `ZzfxSfxSystem` (ref-counted loops) |
+| `zapsphere:lightning` | `ZapsphereActor` | `ZzfxSfxSystem` |
+| `score:changed` / `health:changed` | `SharedPlayerState` | HUD (no SFX today) |
+| `fleet:lost` / `game:over` / `game:won` | `SharedPlayerState` / (future) | `ZzfxSfxSystem` where wired |
+
+Full typed list: `src/utils/GameEvents.ts`.
 
 ---
 
@@ -141,7 +140,9 @@ Live in `src/systems/` — independent of any single actor:
 | `DamageSystem` ✓ | Implemented inside `SharedPlayerState.applyDamage` — shield absorption → health → threshold → upgrade loss |
 | `UpgradeManager` ✓ | Implemented inside `SharedPlayerState` — shooterType, weaponPower, shield, panicButton tracking and application |
 | `ScoreManager` | Score accumulation, streak timer, multiplier, room clear and time bonuses — deferred |
-| `AudioManager` | Wraps Tone.js; exposes named trigger methods — deferred |
+| `AudioManager` | Shared `AudioContext`, `musicGainNode` + `sfxGainNode`, `unlock()` — **active** |
+| `ZzfxSfxSystem` | `GameEvents` → baked ZzFX buffers → `sfxGainNode` — **active** (`GameplayScene`) |
+| `ZzfxmMusicPlayer` | ZzFXM render + looping BGM on `musicGainNode` — **active** |
 | `BulletPool` | Object pool for bullet actors — deferred |
 
 ---

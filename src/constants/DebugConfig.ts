@@ -36,6 +36,12 @@ export interface DebugSettings {
   godMode?: boolean;
   /** Incoming damage multiplier. 0.25 = easy (default), 1.0 = full/hard. */
   damageScale?: number;
+
+  // ── Audio ────────────────────────────────────────────────────────────────────
+  /** When false, no ZzFX SFX ({@link ZzfxSfxSystem}). Default: SFX on. */
+  enableSfx?: boolean;
+  /** When false, no ZzFXM background music after audio unlock. Default: music on. */
+  enableMusic?: boolean;
 }
 
 /**

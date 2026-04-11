@@ -168,10 +168,9 @@ export class ZapsphereActor extends ex.Actor {
   }
 
   /**
-   * Called for ALL kill scenarios: health death, room transition, direct kill.
-   * Emits warning-off (idempotent via playerInDanger flag).
+   * Excalibur does not call `onKill` — use {@link onPreKill}. Ensures warning-off on room unload etc.
    */
-  onKill(): void {
+  onPreKill(_scene: ex.Scene): void {
     this.deactivateWarning();
   }
 
@@ -186,7 +185,7 @@ export class ZapsphereActor extends ex.Actor {
     this.deactivateWarning();
     GameEvents.emit('enemy:died', { points: ZAPSPHERE.POINT_VALUE, x: this.pos.x, y: this.pos.y });
     this.spawnFragments();
-    this.kill(); // → triggers onKill() which is now a safe no-op (playerInDanger already false)
+    this.kill(); // → onPreKill: warning-off if needed
   }
 
   private triggerScalePulse(damage: number): void {
