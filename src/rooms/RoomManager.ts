@@ -1,7 +1,7 @@
 import * as ex from 'excalibur';
 import { GAME, ROOM, DOOR, SPAWNER } from '../constants';
 import type { RoomDef, DoorDef, DoorSide } from './RoomDef';
-import { MAZE } from './MazeGraph';
+import { EXIT_ROOM_ID, MAZE, START_ROOM_ID } from './MazeGraph';
 import { DoorActor } from '../actors/DoorActor';
 import { SpawnerActor } from '../actors/SpawnerActor';
 import { GameEvents } from '../utils/GameEvents';
@@ -50,6 +50,8 @@ export class RoomManager {
   private _currentDifficulty = 0;
   private diedHandler: (() => void) | null = null;
   private readonly clearedRooms = new Set<string>();
+  /** Room definition for the last `load` (used when live count hits 0). */
+  private currentRoomDef: RoomDef | null = null;
 
   get liveCount(): number { return this._liveCount; }
   get currentRoomId(): string { return this._currentRoomId; }
@@ -83,6 +85,11 @@ export class RoomManager {
     }
 
     // Build new room.
+    this.currentRoomDef = roomDef;
+    // Re-allow an empty-exit `game:won` after a victory once the player returns to the maze entry.
+    if (roomDef.id === START_ROOM_ID) {
+      this.clearedRooms.delete(EXIT_ROOM_ID);
+    }
     this._currentRoomId = roomDef.id;
     this._currentDifficulty = roomDef.difficulty;
 
@@ -109,12 +116,14 @@ export class RoomManager {
       if (alreadyCleared) {
         this.openDoorsWithoutClearFanfare();
       } else {
-        this.unlockAfterAllEnemiesGone();
+        this.unlockAfterAllEnemiesGone(roomDef);
       }
     } else {
       this.diedHandler = () => {
         this._liveCount = Math.max(0, this._liveCount - 1);
-        if (this._liveCount === 0) this.unlockAfterAllEnemiesGone();
+        if (this._liveCount === 0 && this.currentRoomDef) {
+          this.unlockAfterAllEnemiesGone(this.currentRoomDef);
+        }
       };
       GameEvents.on('enemy:died', this.diedHandler);
     }
@@ -123,6 +132,11 @@ export class RoomManager {
   /** Forget which rooms were cleared (e.g. after a full maze victory). */
   clearClearedRooms(): void {
     this.clearedRooms.clear();
+  }
+
+  /** Mark a room as cleared without combat (e.g. new maze exit after a win). */
+  markRoomCleared(roomId: string): void {
+    this.clearedRooms.add(roomId);
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────
@@ -290,15 +304,16 @@ export class RoomManager {
     }
   }
 
-  /** First time this room goes from contested → empty: fanfare once; exit room also emits `game:won`. */
-  private unlockAfterAllEnemiesGone(): void {
+  /** First time this room goes from contested → empty: fanfare once; empty exit skips `room:cleared` but still wins. */
+  private unlockAfterAllEnemiesGone(roomDef: RoomDef): void {
     const firstClear = !this.clearedRooms.has(this._currentRoomId);
     this.clearedRooms.add(this._currentRoomId);
-    if (firstClear) {
+    const spawnerMachines = roomDef.spawners.reduce((n, s) => n + s.count, 0);
+    const emptyExit = roomDef.isExit && spawnerMachines === 0;
+    if (firstClear && !emptyExit) {
       GameEvents.emit('room:cleared', {});
     }
-    const room = MAZE[this._currentRoomId];
-    if (room?.isExit && firstClear) {
+    if (roomDef.isExit && firstClear) {
       GameEvents.emit('game:won', {});
     }
     for (const door of this.doors) {

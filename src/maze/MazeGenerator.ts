@@ -106,23 +106,6 @@ function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEn
   return result;
 }
 
-/** Exit cell: combat finale before victory (was empty). */
-function buildExitRoomSpawners(difficulty: number, rng: SeededRandom): SpawnerDef[] {
-  const result: SpawnerDef[] = [
-    { type: 'wanderer', count: 1 },
-    { type: 'dart', count: 1 },
-    { type: 'worm', count: 1 },
-  ];
-  if (difficulty >= 0.35) result.push({ type: 'satellite', count: 1 });
-  if (difficulty >= 0.5) result.push({ type: 'wrangler', count: 1 });
-  result.push({ type: 'blaster', count: 1 });
-  if (difficulty >= 0.75 && rng.nextBool(0.5)) {
-    result.push({ type: 'blaster', count: 1 });
-  }
-  ensureMinSpawnerMachines(result, MIN_MACHINES);
-  return result;
-}
-
 /**
  * Generate a perfect maze on a gridW×gridH grid using recursive backtracking (DFS).
  *
@@ -130,7 +113,7 @@ function buildExitRoomSpawners(difficulty: number, rng: SeededRandom): SpawnerDe
  * - Exit room: the cell farthest from start by graph distance (BFS)
  * - Difficulty: normalized BFS distance from exit (0.0 = far from exit = easy,
  *   1.0 = at exit = hardest)
- * - Enemy mix scales with difficulty; exit room is a short finale (`buildExitRoomSpawners`).
+ * - Enemy mix scales with difficulty; exit cell has **no** spawners (victory room only).
  */
 export function generateMaze(seed: number, gridW: number, gridH: number): MazeResult {
   const rng = new SeededRandom(seed);
@@ -245,7 +228,7 @@ export function generateMaze(seed: number, gridW: number, gridH: number): MazeRe
       rooms[id] = {
         id,
         doors,
-        spawners: isExit ? buildExitRoomSpawners(difficulty, rng) : buildSpawners(difficulty, rng, bossType),
+        spawners: isExit ? [] : buildSpawners(difficulty, rng, bossType),
         difficulty,
         isExit,
       };

@@ -8,7 +8,7 @@ import { StartScreenOverlay } from '../ui/StartScreenOverlay';
 import { GameEvents } from '../utils/GameEvents';
 import { RoomManager } from '../rooms/RoomManager';
 import { PickupActor } from '../actors/PickupActor';
-import { MAZE, START_ROOM_ID, resetMazeGraph } from '../rooms/MazeGraph';
+import { EXIT_ROOM_ID, MAZE, START_ROOM_ID, resetMazeGraph } from '../rooms/MazeGraph';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
 import type { PickupType } from '../types/GameTypes';
@@ -86,6 +86,8 @@ export class GameplayScene extends ex.Scene {
     GameEvents.on('game:won', () => {
       resetMazeGraph(MAZE_GEN.SEED);
       this.roomManager.clearClearedRooms();
+      // Empty exit stays "cleared" so re-entering does not fire `game:won` again until other rooms are played.
+      this.roomManager.markRoomCleared(EXIT_ROOM_ID);
       this.spawnVictoryPickups(MAZE_GEN.VICTORY_PICKUP_COUNT);
     });
 
