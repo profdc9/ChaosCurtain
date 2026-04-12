@@ -1,5 +1,6 @@
 import * as ex from 'excalibur';
 import { BULLET, ROOM } from '../constants';
+import { freezeActorIfGameplayPaused } from '../utils/GameplayPause';
 
 export class BulletActor extends ex.Actor {
   readonly isBullet = true;
@@ -34,6 +35,7 @@ export class BulletActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, _delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     // Kill when out of room bounds
     if (
       this.pos.x < ROOM.INNER_LEFT ||

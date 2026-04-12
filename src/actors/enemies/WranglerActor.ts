@@ -3,6 +3,7 @@ import { WRANGLER } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 // Satellite offsets from body center (local space)
 const SAT_OFFSETS: ex.Vector[] = [
@@ -79,6 +80,7 @@ export class WranglerActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     const dt = delta / 1000;
     const dist = this.pos.distance(this.playerRef.pos);
 

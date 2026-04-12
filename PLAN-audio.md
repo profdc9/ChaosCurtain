@@ -6,11 +6,12 @@ Tone.js was removed from the main branch. Audio uses a **single `AudioContext`**
 
 | Piece | Role |
 |--------|------|
-| `AudioManager` | Creates context, `musicGainNode`, `sfxGainNode`; `unlock()` after first user gesture (`GameplayScene` start overlay). |
+| `AudioManager` | Creates context, `musicGainNode`, `sfxGainNode`; `unlock()` after first user gesture on the **main menu** (`prepareGameAudioFromUserGesture` before gameplay). |
 | `ZzfxSoundBank` | One-time bake: `ZZFX.buildSamples` from `zzfxPresets.ts` → `Float32Array` per cue. |
-| `ZzfxSfxSystem` | Subscribes to `GameEvents`; plays one-shots via `AudioBufferSourceNode` → `sfxGainNode`. |
-| `ZzfxmMusicPlayer` | Renders ZzFXM song data (`zzfxmRender.ts`) → stereo buffer → looping source → `musicGainNode`. |
-| `src/audio/songs/music-jump.js` | Default BGM (converted MOD → ZzFXM); re-exported from `musicJumpSong.ts`. |
+| `ZzfxSfxSystem` | Subscribes to `GameEvents`; plays one-shots via `AudioBufferSourceNode` → `sfxGainNode` — constructed once from `prepareGameAudioFromUserGesture`. |
+| `ZzfxmMusicPlayer` | Renders ZzFXM song data (`zzfxmRender.ts`) → stereo `AudioBuffer` (cached by key) → `AudioBufferSourceNode` → `musicGainNode`; supports **looping** or one-shot + `onEnded`. |
+| `roomTrackerMusic.ts` | After unlock: random converted MOD playlist; **loop** current module in-room; **new random module** on each `room:entered`; `stop()` when quitting to menu. |
+| `modtracker/zzfxm-converted/*.js` | ESM `export default [ instruments, patterns, sequence, … ]` for direct imports. |
 
 **DebugConfig:** `enableSfx`, `enableMusic` — set to `false` to mute either bus.
 
@@ -18,14 +19,14 @@ Tone.js was removed from the main branch. Audio uses a **single `AudioContext`**
 
 ## Background music
 
-- **In use:** ZzFXM procedural track **music-jump** (looping) after audio unlock, unless `enableMusic === false`.
-- **Historical:** MIDI + `Tone.Transport` lived on branch **`chiptune-music`**; not used on `main`.
+- **In use:** `startTrackerPlaylist()` in `roomTrackerMusic.ts` — picks a random module from the converted set, plays it **looped** until the next **`room:entered`**, then picks another (avoids re-decoding a new buffer on every song end). Stopped when returning to the main menu from gameplay so menu is not layered on the old room track.
+- **Historical:** MIDI + `Tone.Transport` lived on branch **`chiptune-music`**; not used on `main`. Single-track **music-jump**-only loop was superseded by the rotating room-based playlist.
 
 ---
 
 ## Sound effects
 
-- **In use:** `ZzfxSfxSystem` is constructed from `GameplayScene` when `enableSfx !== false`, after `ZzfxSoundBank.buildAll()`.
+- **In use:** `ZzfxSfxSystem` is constructed from `prepareGameAudioFromUserGesture` when `enableSfx !== false`, after `ZzfxSoundBank.buildAll()`.
 - **Presets:** `src/audio/zzfxPresets.ts` — original game `zzfx(...[, …])` sparse tuples (volume slot empty → default 1; randomness `0` for deterministic bakes).
 - **Removed from tree:** `src/audio/SfxSystem.ts`, `src/audio/MusicSystem.ts` (old Tone-based implementations).
 

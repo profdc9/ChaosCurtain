@@ -2,8 +2,7 @@ import DebugConfig from '../constants/DebugConfig';
 import { AudioManager } from './AudioManager';
 import { ZzfxSoundBank } from './ZzfxSoundBank';
 import { ZzfxSfxSystem } from './ZzfxSfxSystem';
-import { ZzfxmMusicPlayer } from './ZzfxmMusicPlayer';
-import { musicJumpSong } from './songs/musicJumpSong';
+import { startTrackerPlaylist } from './roomTrackerMusic';
 
 let prepared = false;
 
@@ -21,7 +20,7 @@ export async function prepareGameAudioFromUserGesture(): Promise<void> {
   }
   if (DebugConfig.enableMusic !== false) {
     queueMicrotask(() => {
-      ZzfxmMusicPlayer.start(musicJumpSong);
+      startTrackerPlaylist();
     });
   }
   prepared = true;

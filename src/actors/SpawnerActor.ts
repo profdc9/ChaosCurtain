@@ -3,6 +3,7 @@ import { SPAWNER, WANDERER, DART, WRANGLER, SATELLITE, WORM, BLASTER, BIRD_BOSS,
 import { HealthComponent } from '../components/HealthComponent';
 import { FragmentActor } from './FragmentActor';
 import { GameEvents } from '../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../utils/GameplayPause';
 import { WandererActor } from './enemies/WandererActor';
 import { DartActor } from './enemies/DartActor';
 import { WranglerActor } from './enemies/WranglerActor';
@@ -92,6 +93,7 @@ export class SpawnerActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     if (this.spawnTimer === Infinity) return;
     this.spawnTimer -= delta / 1000;
     if (this.spawnTimer <= 0) {

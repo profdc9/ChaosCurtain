@@ -3,6 +3,7 @@ import { SNAKE_BOSS, ROOM } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 import { SnakeSegmentActor } from './SnakeSegmentActor';
 
 type SnakeState = 'orbit' | 'ram' | 'recoil';
@@ -102,6 +103,7 @@ export class SnakeBossActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     const dt = delta / 1000;
     this.stateTimer += dt;
 

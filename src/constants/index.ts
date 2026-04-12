@@ -252,6 +252,13 @@ export const ZAPSPHERE = {
   COLOR_CYCLE_BASE: 1.0,      // color states/s at zero dwell
   COLOR_CYCLE_ACCEL: 5.0,     // multiplier added at full dwell
   DAMAGE_MULTIPLIER: 2.5,     // bullet damage multiplier when player is in danger zone
+  /** Spiral toward nearest player (satellite-like): tangential + inward radial. */
+  SPIRAL_TANGENTIAL_SPEED: 95,
+  SPIRAL_RADIAL_LOW: 14,
+  SPIRAL_RADIAL_HIGH: 58,
+  /** Seconds between abrupt radial speed jumps (inward pull alternates). */
+  RADIAL_JUMP_INTERVAL_MIN: 1.1,
+  RADIAL_JUMP_INTERVAL_MAX: 2.6,
   COLOR_CIRCLE: '#00ffff',
   POINT_VALUE: 2500,
   FRAGMENT_SPEED_MIN: 80,
@@ -277,8 +284,13 @@ export const GLITCH_BOSS = {
   CONE_BASE_HALF: 0.30,       // rad, cone half-angle at max range (narrow)
   CONE_MAX_HALF: 1.35,        // rad, cone half-angle at close range (wide)
   CONE_MAX_DIST: 420,         // distance beyond which cone is at minimum angle
-  /** Max rad/s the arrow rotates toward the closest player (shortest arc). */
+  /** Max rad/s the arrow rotates toward/away from players (shortest arc). */
   ARROW_TRACKING_TURN_RATE: 0.9,
+  /** Arrow alternates tracking players vs turning away; phase length bounds (seconds). */
+  ARROW_PHASE_TOWARD_MIN: 3,
+  ARROW_PHASE_TOWARD_MAX: 7,
+  ARROW_PHASE_AWAY_MIN: 3,
+  ARROW_PHASE_AWAY_MAX: 7,
   DAMAGE_MIN_SCALE: 0.15,     // bullet damage fraction at max distance
   DAMAGE_MAX_DIST: 500,       // beyond this, minimum damage applies
   COLOR_CYCLE_SPEED: 0.5,     // arrow color states per second

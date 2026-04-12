@@ -14,6 +14,8 @@ import type { PickupType } from '../types/GameTypes';
 import { isGameAudioPrepared } from '../audio/prepareGameAudio';
 import { damageScaleForDifficulty, getGameSettings } from '../settings/GameSettings';
 import { spawnPlayerDeathFragments } from '../utils/spawnPlayerDeathFragments';
+import { PauseOverlay } from '../ui/PauseOverlay';
+import { setGameplayPaused } from '../utils/GameplayPause';
 
 /** Seconds between pickup spawns (randomised each time). */
 const PICKUP_INTERVAL_MIN = 60;
@@ -27,6 +29,39 @@ export class GameplayScene extends ex.Scene {
   private roomManager!: RoomManager;
   private playerActor!: PlayerActor;
   private playerActor2: PlayerActor | null = null;
+  private pauseOverlay!: PauseOverlay;
+
+  private readonly onEnemyDiedBound = (evt: { points: number }): void => {
+    this.sharedState.addScore(evt.points);
+  };
+
+  private readonly onFleetLostBound = (): void => {
+    this.fleetDeathRoomId = this.roomManager.currentRoomId;
+    this.playerActor.setFleetLossFrozen(true);
+    this.playerActor2?.setFleetLossFrozen(true);
+    const fragPos = this.playerActor2
+      ? ex.vec(
+        (this.playerActor.pos.x + this.playerActor2.pos.x) / 2,
+        (this.playerActor.pos.y + this.playerActor2.pos.y) / 2,
+      )
+      : this.playerActor.pos;
+    spawnPlayerDeathFragments(
+      this,
+      fragPos,
+      this.playerActor.rotation,
+      this.playerActor.shipStrokeColor,
+    );
+    this.fleetRespawnTimer = PLAYER.FLEET_RESPAWN_DELAY_SEC;
+  };
+
+  private readonly onGameWonBound = (): void => {
+    this.sharedState.scoreLocked = true;
+    resetMazeGraph(MAZE_GEN.SEED);
+    this.roomManager.clearClearedRooms();
+    // Empty exit stays "cleared" so re-entering does not fire `game:won` again until other rooms are played.
+    this.roomManager.markRoomCleared(EXIT_ROOM_ID);
+    this.spawnVictoryPickups(MAZE_GEN.VICTORY_PICKUP_COUNT);
+  };
 
   // ── Pickup spawn timer ─────────────────────────────────────────────────────
   private pickupTimer    = 0;
@@ -53,9 +88,7 @@ export class GameplayScene extends ex.Scene {
     // ── Game objects ─────────────────────────────────────────────────────────
     this.applyDebugUpgrades();
 
-    GameEvents.on('enemy:died', (evt) => {
-      this.sharedState.addScore(evt.points);
-    });
+    GameEvents.on('enemy:died', this.onEnemyDiedBound);
 
     const p1 = new PlayerActor(
       engine,
@@ -87,38 +120,32 @@ export class GameplayScene extends ex.Scene {
     this.roomManager = new RoomManager(this, p1, this.playerActor2);
     this.roomManager.load(this.buildStartRoom(MAZE[START_ROOM_ID]), null);
 
-    GameEvents.on('fleet:lost', () => {
-      this.fleetDeathRoomId = this.roomManager.currentRoomId;
-      this.playerActor.setFleetLossFrozen(true);
-      this.playerActor2?.setFleetLossFrozen(true);
-      const fragPos = this.playerActor2
-        ? ex.vec(
-          (this.playerActor.pos.x + this.playerActor2.pos.x) / 2,
-          (this.playerActor.pos.y + this.playerActor2.pos.y) / 2,
-        )
-        : this.playerActor.pos;
-      spawnPlayerDeathFragments(
-        this,
-        fragPos,
-        this.playerActor.rotation,
-        this.playerActor.shipStrokeColor,
-      );
-      this.fleetRespawnTimer = PLAYER.FLEET_RESPAWN_DELAY_SEC;
-    });
+    GameEvents.on('fleet:lost', this.onFleetLostBound);
 
-    GameEvents.on('game:won', () => {
-      this.sharedState.scoreLocked = true;
-      resetMazeGraph(MAZE_GEN.SEED);
-      this.roomManager.clearClearedRooms();
-      // Empty exit stays "cleared" so re-entering does not fire `game:won` again until other rooms are played.
-      this.roomManager.markRoomCleared(EXIT_ROOM_ID);
-      this.spawnVictoryPickups(MAZE_GEN.VICTORY_PICKUP_COUNT);
-    });
+    GameEvents.on('game:won', this.onGameWonBound);
 
     this.add(new DebugOverlay(this.sharedState, this.roomManager));
+
+    this.pauseOverlay = new PauseOverlay(engine);
+    this.add(this.pauseOverlay);
+  }
+
+  onDeactivate(_ctx: ex.SceneActivationContext): void {
+    this.pauseOverlay.forceCloseIfOpen();
+    setGameplayPaused(false);
+    this.roomManager.detachGlobalListeners();
+    GameEvents.off('enemy:died', this.onEnemyDiedBound);
+    GameEvents.off('fleet:lost', this.onFleetLostBound);
+    GameEvents.off('game:won', this.onGameWonBound);
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    const kb = _engine.input.keyboard;
+    if (!this.pauseOverlay.isMenuOpen() && kb.wasPressed(ex.Keys.Escape)) {
+      this.pauseOverlay.openMenu();
+    }
+    if (this.pauseOverlay.isMenuOpen()) return;
+
     if (this.fleetRespawnTimer !== null) {
       this.fleetRespawnTimer -= delta / 1000;
       if (this.fleetRespawnTimer <= 0) {
@@ -141,6 +168,7 @@ export class GameplayScene extends ex.Scene {
 
   /** After movement/physics so co-op exit passage overlap sees up-to-date player positions. */
   onPostUpdate(_engine: ex.Engine, _delta: number): void {
+    if (this.pauseOverlay.isMenuOpen()) return;
     this.roomManager.tickCoopPassageOverlap();
   }
 

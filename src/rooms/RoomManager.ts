@@ -6,6 +6,7 @@ import { EXIT_ROOM_ID, MAZE, START_ROOM_ID } from './MazeGraph';
 import { DoorActor } from '../actors/DoorActor';
 import { SpawnerActor } from '../actors/SpawnerActor';
 import { GameEvents } from '../utils/GameEvents';
+import { setCoopPassageWallClampBypass } from '../utils/CoopPassageClamp';
 
 const OPPOSITE: Record<DoorSide, DoorSide> = {
   north: 'south',
@@ -159,6 +160,14 @@ export class RoomManager {
     this.player2 = player2;
   }
 
+  /** Remove `enemy:died` subscription when the owning scene is discarded (e.g. quit to menu). */
+  detachGlobalListeners(): void {
+    if (this.diedHandler) {
+      GameEvents.off('enemy:died', this.diedHandler);
+      this.diedHandler = null;
+    }
+  }
+
   private pickTargetPlayer(from: ex.Vector): ex.Actor {
     if (!this.player2) return this.player;
     const d1 = from.distance(this.player.pos);
@@ -217,6 +226,7 @@ export class RoomManager {
   load(roomDef: RoomDef, entranceSide: DoorSide | null): void {
     this.coopPending = null;
     this.coopPassagePrev = null;
+    setCoopPassageWallClampBypass(false);
 
     // Remove all current room actors.
     // Guard against actors that were queued via scene.add() but not yet
@@ -488,6 +498,7 @@ export class RoomManager {
       p2Passed: false,
       passageBounds: this.coopPassageWorldBoundsInflated(doorDef.side),
     };
+    setCoopPassageWallClampBypass(true);
     this.coopPassagePrev = {
       p1: this.player.pos.clone(),
       p2: this.player2.pos.clone(),

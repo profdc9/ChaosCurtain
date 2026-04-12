@@ -39,9 +39,11 @@
 
 ---
 
-## Main Menu ✓ partial
+## Main Menu ✓
 
-**Implemented in code:** `MainMenuScene` / `MainMenuScreen` — **Start Game** (runs audio prep then `goToScene('gameplay')`), **Settings** (`SettingsScreen`), **Quit** (row present; no action wired). Vector **`StrokeFont`** styling on menu copy.
+**Implemented in code:** `MainMenuScene` / `MainMenuScreen` — **Start Game** (runs `prepareGameAudioFromUserGesture` then `goToScene('gameplay')`), **Settings** (`SettingsScreen` overlay), **Quit** (no-op row for browser build). Vector **`StrokeFont`** styling on menu copy.
+
+**Return from gameplay:** `MainMenuScene.onActivate` arms **pointer suppression** (`armPointerSuppressionAfterShow`) so the mouse button used on in-game Quit does not activate Start on the next frame; `onDeactivate` clears pending pointer state when leaving for gameplay.
 
 **Settings screen (`SettingsScreen`) today:**
 - **Difficulty** — easy / moderate / hard (maps to incoming-damage scale via `SharedPlayerState.damageScale`)
@@ -70,12 +72,12 @@
 
 ---
 
-## Pause Menu
+## Pause Menu ✓
 
 - Resume
-- Quit
+- Quit to main menu (stops the run: gameplay scene is removed and re-added when the menu activates so a new **Start** begins fresh)
 
-**Current code:** no pause overlay or scene — design only.
+**Implemented:** `src/ui/PauseOverlay.ts` — full-screen `ScreenElement` (high z), dimmed panel, `StrokeFont` rows; **ESC** opens from `GameplayScene` when not already open (and closes / backs out when open). While open, `setGameplayPaused(true)` gates `PlayerActor` and all combat actors via `freezeActorIfGameplayPaused`; window `keydown` (capture) handles menu navigation when frame delta is irrelevant.
 
 ---
 

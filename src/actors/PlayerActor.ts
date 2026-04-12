@@ -1,10 +1,12 @@
 import * as ex from 'excalibur';
-import { PLAYER } from '../constants';
+import { PLAYER, ROOM } from '../constants';
 import type { ControlScheme } from '../settings/GameSettings';
 import { InputSystem } from '../systems/InputSystem';
 import { BulletActor } from './BulletActor';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { GameEvents } from '../utils/GameEvents';
+import { isCoopPassageWallClampBypassed } from '../utils/CoopPassageClamp';
+import { freezeActorIfGameplayPaused, isGameplayPaused } from '../utils/GameplayPause';
 
 export class PlayerActor extends ex.Actor {
   readonly isPlayer = true; // duck-typed by DoorActor and PickupActor
@@ -85,6 +87,7 @@ export class PlayerActor extends ex.Actor {
   }
 
   onPreUpdate(engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     if (this.fleetLossFrozen) return;
     const dt = delta / 1000;
     const state = this.input.getState(this.pos);
@@ -145,6 +148,38 @@ export class PlayerActor extends ex.Actor {
         this.applyPanicDamage(engine, damage);
       }
     }
+  }
+
+  /**
+   * Hard clamp after physics so high-speed diagonal pushes cannot tunnel through Fixed walls
+   * (circle vs thin box can miss in one integration step).
+   */
+  onPostUpdate(_engine: ex.Engine, _delta: number): void {
+    if (isGameplayPaused()) return;
+    if (this.fleetLossFrozen) return;
+    if (isCoopPassageWallClampBypassed()) return;
+    const r = PLAYER.COLLIDER_RADIUS;
+    const x0 = ROOM.INNER_LEFT + r;
+    const x1 = ROOM.INNER_RIGHT - r;
+    const y0 = ROOM.INNER_TOP + r;
+    const y1 = ROOM.INNER_BOTTOM - r;
+    let x = this.pos.x;
+    let y = this.pos.y;
+    if (x < x0) {
+      x = x0;
+      this.vel = ex.vec(Math.max(0, this.vel.x), this.vel.y);
+    } else if (x > x1) {
+      x = x1;
+      this.vel = ex.vec(Math.min(0, this.vel.x), this.vel.y);
+    }
+    if (y < y0) {
+      y = y0;
+      this.vel = ex.vec(this.vel.x, Math.max(0, this.vel.y));
+    } else if (y > y1) {
+      y = y1;
+      this.vel = ex.vec(this.vel.x, Math.min(0, this.vel.y));
+    }
+    this.pos = ex.vec(x, y);
   }
 
   private spawnBullets(engine: ex.Engine, aim: ex.Vector): void {

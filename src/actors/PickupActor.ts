@@ -2,6 +2,7 @@ import * as ex from 'excalibur';
 import { PICKUP, PLAYER } from '../constants';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { GameEvents } from '../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../utils/GameplayPause';
 import type { PickupType } from '../types/GameTypes';
 
 /** Linearly interpolate between two hex color strings by factor t (0=a, 1=b). */
@@ -49,6 +50,7 @@ export class PickupActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     this.flashTimer += delta / 1000;
   }
 

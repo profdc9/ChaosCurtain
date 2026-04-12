@@ -4,6 +4,7 @@ import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { LightningBoltActor } from '../LightningBoltActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 // Gray → White → Blue (3-state cycle)
 const SQUARE_COLORS = ['#888888', '#ffffff', '#0088ff'];
@@ -34,8 +35,10 @@ export class ZapsphereActor extends ex.Actor {
   private dwellTimer   = 0;
   private lightningCooldown = 0;
   private playerInDanger = false;
-  private clusterTarget: ex.Vector | null = null;
-  private clusterUpdateTimer = 0;
+  /** Satellite-like spiral: perpendicular sign to inward vector. */
+  private readonly spiralSpinSign: number;
+  private radialInwardSpeed: number = ZAPSPHERE.SPIRAL_RADIAL_LOW;
+  private radialJumpTimer = 0;
 
   private readonly zapsCanvas: ex.Canvas;
 
@@ -46,6 +49,10 @@ export class ZapsphereActor extends ex.Actor {
     });
 
     this.pickTargetPlayer = pickTargetPlayer;
+    this.spiralSpinSign = Math.random() < 0.5 ? 1 : -1;
+    this.pickNewRadialJumpInterval();
+    this.pickNewRadialInwardSpeed();
+
     this.dwellThreshold =
       ZAPSPHERE.DWELL_THRESHOLD_EASY +
       difficulty * (ZAPSPHERE.DWELL_THRESHOLD_HARD - ZAPSPHERE.DWELL_THRESHOLD_EASY);
@@ -89,6 +96,7 @@ export class ZapsphereActor extends ex.Actor {
   }
 
   onPreUpdate(engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     const dt = delta / 1000;
 
     // Animate inner square
@@ -120,24 +128,24 @@ export class ZapsphereActor extends ex.Actor {
       this.dwellTimer = Math.max(0, this.dwellTimer - dt * 2); // drains faster outside
     }
 
-    // Cluster-seeking movement (re-evaluate target every 0.5s)
-    this.clusterUpdateTimer += dt;
-    if (this.clusterUpdateTimer >= 0.5) {
-      this.clusterUpdateTimer = 0;
-      this.updateClusterTarget(engine);
+    // Spiral inward toward nearest player (satellite-like) with abrupt radial speed changes.
+    this.radialJumpTimer -= dt;
+    if (this.radialJumpTimer <= 0) {
+      this.pickNewRadialJumpInterval();
+      this.pickNewRadialInwardSpeed();
     }
 
-    if (this.clusterTarget !== null) {
-      const toTarget = this.clusterTarget.sub(this.pos);
-      if (toTarget.size > 20) {
-        this.vel = toTarget.normalize().scale(ZAPSPHERE.DRIFT_SPEED);
-      } else {
-        this.vel = ex.Vector.Zero;
-      }
+    const prey = this.pickTargetPlayer(this.pos);
+    const toPlayer = prey.pos.sub(this.pos);
+    const dist = toPlayer.size;
+    if (dist > 1) {
+      const inward = toPlayer.normalize();
+      const tangent = ex.vec(-inward.y, inward.x).scale(this.spiralSpinSign);
+      this.vel = tangent
+        .scale(ZAPSPHERE.SPIRAL_TANGENTIAL_SPEED)
+        .add(inward.scale(this.radialInwardSpeed));
     } else {
-      // No other enemies — drift slowly toward room center
-      const toCenter = ex.vec((INNER.L + INNER.R) / 2, (INNER.T + INNER.B) / 2).sub(this.pos);
-      this.vel = toCenter.size > 20 ? toCenter.normalize().scale(ZAPSPHERE.DRIFT_SPEED * 0.4) : ex.Vector.Zero;
+      this.vel = ex.Vector.Zero;
     }
 
     // Clamp to room
@@ -147,17 +155,22 @@ export class ZapsphereActor extends ex.Actor {
     );
   }
 
-  private updateClusterTarget(engine: ex.Engine): void {
-    const others = engine.currentScene.actors.filter(a =>
-      a !== this && (a as ex.Actor & { isEnemy?: boolean }).isEnemy === true && !a.isKilled(),
-    );
-    if (others.length === 0) {
-      this.clusterTarget = null;
-      return;
+  private pickNewRadialJumpInterval(): void {
+    const lo = ZAPSPHERE.RADIAL_JUMP_INTERVAL_MIN;
+    const hi = ZAPSPHERE.RADIAL_JUMP_INTERVAL_MAX;
+    this.radialJumpTimer = lo + Math.random() * (hi - lo);
+  }
+
+  /** Abruptly pick a new inward radial speed (high vs low) for a pulsing spiral feel. */
+  private pickNewRadialInwardSpeed(): void {
+    const lo = ZAPSPHERE.SPIRAL_RADIAL_LOW;
+    const hi = ZAPSPHERE.SPIRAL_RADIAL_HIGH;
+    const useHigh = Math.random() < 0.5;
+    let next = useHigh ? hi : lo;
+    if (Math.abs(next - this.radialInwardSpeed) < 1) {
+      next = useHigh ? lo : hi;
     }
-    let sum = ex.vec(0, 0);
-    for (const a of others) sum = sum.add(a.pos);
-    this.clusterTarget = sum.scale(1 / others.length);
+    this.radialInwardSpeed = next;
   }
 
   private fireLightning(engine: ex.Engine, targets: ex.Actor[]): void {

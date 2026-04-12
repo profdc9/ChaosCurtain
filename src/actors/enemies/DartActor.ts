@@ -3,6 +3,7 @@ import { DART } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 // Six line segments defining the dart chevron in local space (rotation = 0, pointing right).
 // Points: Nose(16,0), TopWing(-8,-10), BotWing(-8,10), TopInner(0,-5), BotInner(0,5)
@@ -73,6 +74,7 @@ export class DartActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     const dt = delta / 1000;
 
     // Steer gradually toward player

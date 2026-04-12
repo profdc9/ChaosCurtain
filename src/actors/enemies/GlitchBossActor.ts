@@ -3,6 +3,7 @@ import { GLITCH_BOSS, ROOM } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 // Arrow colors — never red (reserved for damage)
 const ARROW_COLORS = ['#00ff00', '#4444ff', '#888888', '#ffffff'];
@@ -31,6 +32,9 @@ export class GlitchBossActor extends ex.Actor {
   private arrowAngle = 0;
   private colorPhase = 0;
   private isGlitching   = false;
+  /** Arrow either tracks the nearest player or deliberately points ~away from them. */
+  private arrowPhase: 'toward' | 'away' = 'toward';
+  private arrowPhaseTimeLeft = 0;
 
   private readonly glitchCanvas: ex.Canvas;
 
@@ -58,6 +62,14 @@ export class GlitchBossActor extends ex.Actor {
       draw: (ctx) => this.drawGlitch(ctx),
     });
     this.graphics.use(this.glitchCanvas);
+    this.resetArrowPhaseDuration();
+  }
+
+  private resetArrowPhaseDuration(): void {
+    const toward = this.arrowPhase === 'toward';
+    const lo = toward ? GLITCH_BOSS.ARROW_PHASE_TOWARD_MIN : GLITCH_BOSS.ARROW_PHASE_AWAY_MIN;
+    const hi = toward ? GLITCH_BOSS.ARROW_PHASE_TOWARD_MAX : GLITCH_BOSS.ARROW_PHASE_AWAY_MAX;
+    this.arrowPhaseTimeLeft = lo + Math.random() * (hi - lo);
   }
 
   /**
@@ -88,11 +100,20 @@ export class GlitchBossActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     const dt = delta / 1000;
 
-    // Arrow slowly tracks the bearing to the closest player (shortest rotation).
+    this.arrowPhaseTimeLeft -= dt;
+    if (this.arrowPhaseTimeLeft <= 0) {
+      this.arrowPhase = this.arrowPhase === 'toward' ? 'away' : 'toward';
+      this.resetArrowPhaseDuration();
+    }
+
+    // Arrow slowly rotates toward closest player, or ~180° away from them (shortest arc each phase).
     const target = this.closestPlayerPos();
-    const targetAngle = Math.atan2(target.y - this.pos.y, target.x - this.pos.x);
+    const angleToPlayer = Math.atan2(target.y - this.pos.y, target.x - this.pos.x);
+    const targetAngle =
+      this.arrowPhase === 'toward' ? angleToPlayer : angleToPlayer + Math.PI;
     let turn = targetAngle - this.arrowAngle;
     turn = ((turn + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
     const maxStep = GLITCH_BOSS.ARROW_TRACKING_TURN_RATE * dt;

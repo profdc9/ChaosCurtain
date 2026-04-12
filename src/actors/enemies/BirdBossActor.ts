@@ -3,6 +3,7 @@ import { BIRD_BOSS, ROOM } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 type BirdState = 'flit' | 'charge' | 'retreat';
 
@@ -79,6 +80,7 @@ export class BirdBossActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     const dt = delta / 1000;
     this.flapPhase += this.flapSpeed * dt;
     this.stateTimer += dt;

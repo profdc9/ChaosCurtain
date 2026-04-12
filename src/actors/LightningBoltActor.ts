@@ -1,5 +1,6 @@
 import * as ex from 'excalibur';
 import { GAME, BLASTER } from '../constants';
+import { freezeActorIfGameplayPaused } from '../utils/GameplayPause';
 
 /**
  * Full-screen overlay actor that draws a fading jagged lightning bolt between
@@ -34,6 +35,7 @@ export class LightningBoltActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     this.elapsed += delta / 1000;
     if (this.elapsed >= BLASTER.BOLT_LIFETIME) {
       this.kill();

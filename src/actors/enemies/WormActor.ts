@@ -3,6 +3,7 @@ import { WORM } from '../../constants';
 import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 export class WormActor extends ex.Actor {
   readonly isEnemy = true;
@@ -88,6 +89,7 @@ export class WormActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     if (this.dead) return;
     const dt = delta / 1000;
 

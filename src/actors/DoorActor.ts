@@ -1,6 +1,7 @@
 import * as ex from 'excalibur';
 import { DOOR, ROOM } from '../constants';
 import type { DoorSide } from '../rooms/RoomDef';
+import { freezeActorIfGameplayPaused } from '../utils/GameplayPause';
 
 /**
  * A door is a colored bar drawn across a gap in the wall.
@@ -96,6 +97,7 @@ export class DoorActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     if (this.animDir === 0) return;
 
     const dt = delta / 1000;

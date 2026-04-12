@@ -4,6 +4,7 @@ import { HealthComponent } from '../../components/HealthComponent';
 import { FragmentActor } from '../FragmentActor';
 import { LightningBoltActor } from '../LightningBoltActor';
 import { GameEvents } from '../../utils/GameEvents';
+import { freezeActorIfGameplayPaused } from '../../utils/GameplayPause';
 
 // Precompute 10 spike segments (2 per spike × 5 spikes) in local space.
 // Each spike: two line segments forming a narrow triangular point.
@@ -81,6 +82,7 @@ export class BlasterActor extends ex.Actor {
   }
 
   onPreUpdate(engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     if (this.dead) return;
     this.elapsed += delta / 1000;
 

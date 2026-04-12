@@ -1,4 +1,5 @@
 import * as ex from 'excalibur';
+import { freezeActorIfGameplayPaused } from '../utils/GameplayPause';
 
 export type FragmentBurnFrom = { r: number; g: number; b: number };
 
@@ -98,6 +99,7 @@ export class FragmentActor extends ex.Actor {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    if (freezeActorIfGameplayPaused(this)) return;
     this.elapsed += delta / 1000;
     if (this.elapsed >= this.lifetime) {
       this.kill();

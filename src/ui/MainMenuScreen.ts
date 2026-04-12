@@ -25,6 +25,11 @@ export class MainMenuScreen extends ex.ScreenElement {
   private selectedIndex = 0;
   private lastScreenPos = ex.vec(0, 0);
   private pointerClickPending = false;
+  /**
+   * After returning from gameplay (or swapping in a fresh menu), ignore pointer-down until the
+   * button is released so the same physical click cannot activate START on the next scene.
+   */
+  private blockMenuPointerUntilUp = false;
   private readonly canvas: ex.Canvas;
 
   private readonly titleY: number;
@@ -33,6 +38,9 @@ export class MainMenuScreen extends ex.ScreenElement {
 
   private moveHandler!: (e: ex.PointerEvent) => void;
   private downHandler!: () => void;
+  private upHandler!: () => void;
+  /** Tracks primary button; `PointerAbstraction` has no `isDown` in Excalibur 0.29. */
+  private primaryPointerDown = false;
 
   constructor(engine: ex.Engine, onStartGame: () => Promise<void>, onOpenSettings: () => void) {
     super({ x: 0, y: 0, z: 2000 });
@@ -57,18 +65,45 @@ export class MainMenuScreen extends ex.ScreenElement {
       this.lastScreenPos = ex.vec(e.screenPos.x, e.screenPos.y);
     };
     this.downHandler = () => {
+      this.primaryPointerDown = true;
+      if (this.blockMenuPointerUntilUp) return;
       this.pointerClickPending = true;
+    };
+    this.upHandler = () => {
+      this.primaryPointerDown = false;
     };
     engine.input.pointers.primary.on('move', this.moveHandler);
     engine.input.pointers.primary.on('down', this.downHandler);
+    engine.input.pointers.primary.on('up', this.upHandler);
 
     this.on('prekill', () => {
       engine.input.pointers.primary.off('move', this.moveHandler);
       engine.input.pointers.primary.off('down', this.downHandler);
+      engine.input.pointers.primary.off('up', this.upHandler);
     });
   }
 
+  /**
+   * Call when this screen is (re)shown after gameplay or after constructing a replacement instance
+   * from settings — clears stale click state and waits for pointer release.
+   */
+  armPointerSuppressionAfterShow(): void {
+    this.pointerClickPending = false;
+    this.blockMenuPointerUntilUp = true;
+  }
+
+  /** Call when leaving the menu scene (e.g. for gameplay) so clicks in-game do not queue a menu click. */
+  resetPointerStateForSceneLeave(): void {
+    this.pointerClickPending = false;
+    this.blockMenuPointerUntilUp = false;
+    this.primaryPointerDown = false;
+  }
+
   onPreUpdate(_engine: ex.Engine, _delta: number): void {
+    if (this.blockMenuPointerUntilUp && !this.primaryPointerDown) {
+      this.blockMenuPointerUntilUp = false;
+    }
+
     const kb = this.engineRef.input.keyboard;
     if (kb.wasPressed(ex.Keys.ArrowUp) || kb.wasPressed(ex.Keys.W)) {
       this.selectedIndex = (this.selectedIndex - 1 + ROWS.length) % ROWS.length;

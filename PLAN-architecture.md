@@ -30,15 +30,15 @@ src/
 
 | Scene | Purpose |
 |---|---|
-| `MainMenuScene` | Main menu navigation |
-| `GameplayScene` | Core game loop — owns the room system |
-| `PauseScene` | Overlay on top of GameplayScene |
+| `MainMenuScene` | Main menu navigation; **settings** are an in-scene `SettingsScreen` overlay, not a separate scene |
+| `GameplayScene` | Core game loop — owns `RoomManager`, players, HUD, debug overlay, **`PauseOverlay`** (not a separate pause scene) |
+| `PauseScene` | *Design target* — today: `PauseOverlay` `ScreenElement` inside `GameplayScene` |
 | `GameOverScene` | Defeat screen with stats |
 | `VictoryScene` | Win screen with stats |
 | `TestControlsScene` | Input verification screen |
-| `SettingsScene` | Audio and control configuration |
+| `SettingsScene` | *Design target* — today: `SettingsScreen` inside `MainMenuScene` |
 
-**`main.ts` today:** only `GameplayScene` is registered and started. Other rows remain design targets.
+**`main.ts` today:** registers **`menu`** and **`gameplay`** scenes; start goes to `menu`. Quitting gameplay switches to `menu`, then **`gameplay` is removed and re-registered** so the next Start gets a new scene instance (Excalibur does not re-run `onInitialize` on reused scenes).
 
 ---
 
@@ -195,4 +195,4 @@ The project began from a **minimal vertical slice** (single room, one player, on
 
 **In the tree today:** procedural maze + `RoomManager` room loads, **spawner machines** and full enemy roster, **upgrades and pickups** (scene-level pickup timer), **Web Audio + ZzFX / ZzFXM**, **main menu** (`MainMenuScene` / `MainMenuScreen`) with **settings** (difficulty, 1–2 players, per-player controls; persisted in `localStorage`), **debug overlay** + `DebugConfig` file overrides.
 
-**Still thin vs design docs:** dedicated **pause** / polished **game-over** scenes, kill-streak scoring and room/time bonuses, optional systems like `BulletPool`. **Co-op exit doors** — see `PLAN-combat.md` (same-door + dual passage overlap in `RoomManager.tickCoopPassageOverlap`, called from `GameplayScene.onPostUpdate`).
+**Still thin vs design docs:** polished **game-over** / victory UI scenes (events exist), kill-streak scoring and room/time bonuses, optional systems like `BulletPool`. **Co-op exit doors** — see `PLAN-combat.md` (same-door + dual passage overlap in `RoomManager.tickCoopPassageOverlap`, called from `GameplayScene.onPostUpdate`). **Pause** is implemented as an overlay + soft pause, not a standalone `PauseScene`.
