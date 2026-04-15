@@ -2,7 +2,7 @@ import * as ex from 'excalibur';
 import { GAME, MENU, ROOM } from '../constants';
 import { StrokeFont } from './StrokeFont';
 
-type MenuAction = 'start' | 'settings' | 'noop';
+type MenuAction = 'start' | 'settings' | 'expert' | 'noop';
 
 interface MenuRow {
   readonly label: string;
@@ -12,6 +12,7 @@ interface MenuRow {
 const ROWS: MenuRow[] = [
   { label: 'START GAME', action: 'start' },
   { label: 'SETTINGS', action: 'settings' },
+  { label: 'EXPERT', action: 'expert' },
   { label: 'QUIT', action: 'noop' },
 ];
 
@@ -22,6 +23,7 @@ export class MainMenuScreen extends ex.ScreenElement {
   private readonly engineRef: ex.Engine;
   private readonly onStartGame: () => Promise<void>;
   private readonly onOpenSettings: () => void;
+  private readonly onOpenExpert: () => void;
   private selectedIndex = 0;
   private lastScreenPos = ex.vec(0, 0);
   private pointerClickPending = false;
@@ -41,12 +43,20 @@ export class MainMenuScreen extends ex.ScreenElement {
   private upHandler!: () => void;
   /** Tracks primary button; `PointerAbstraction` has no `isDown` in Excalibur 0.29. */
   private primaryPointerDown = false;
+  /** Prevents overlapping `onStartGame` calls (Enter + click same frame, or double-tap). */
+  private startGameInProgress = false;
 
-  constructor(engine: ex.Engine, onStartGame: () => Promise<void>, onOpenSettings: () => void) {
+  constructor(
+    engine: ex.Engine,
+    onStartGame: () => Promise<void>,
+    onOpenSettings: () => void,
+    onOpenExpert: () => void,
+  ) {
     super({ x: 0, y: 0, z: 2000 });
     this.engineRef = engine;
     this.onStartGame = onStartGame;
     this.onOpenSettings = onOpenSettings;
+    this.onOpenExpert = onOpenExpert;
 
     const midY = ROOM.HUD_HEIGHT + (GAME.HEIGHT - ROOM.HUD_HEIGHT) / 2;
     this.titleY = midY - 140;
@@ -111,17 +121,21 @@ export class MainMenuScreen extends ex.ScreenElement {
     if (kb.wasPressed(ex.Keys.ArrowDown) || kb.wasPressed(ex.Keys.S)) {
       this.selectedIndex = (this.selectedIndex + 1) % ROWS.length;
     }
-    if (kb.wasPressed(ex.Keys.Enter) || kb.wasPressed(ex.Keys.Space)) {
-      void this.activateSelection();
-    }
 
+    this.updateHoverFromPointer();
+
+    let doActivate = false;
+    if (kb.wasPressed(ex.Keys.Enter) || kb.wasPressed(ex.Keys.Space)) {
+      doActivate = true;
+    }
     if (this.pointerClickPending) {
       this.pointerClickPending = false;
       this.updateHoverFromPointer();
+      doActivate = true;
+    }
+    if (doActivate) {
       void this.activateSelection();
     }
-
-    this.updateHoverFromPointer();
   }
 
   private updateHoverFromPointer(): void {
@@ -142,11 +156,21 @@ export class MainMenuScreen extends ex.ScreenElement {
   private async activateSelection(): Promise<void> {
     const row = ROWS[this.selectedIndex];
     if (row.action === 'start') {
-      await this.onStartGame();
+      if (this.startGameInProgress) return;
+      this.startGameInProgress = true;
+      try {
+        await this.onStartGame();
+      } finally {
+        this.startGameInProgress = false;
+      }
       return;
     }
     if (row.action === 'settings') {
       this.onOpenSettings();
+      return;
+    }
+    if (row.action === 'expert') {
+      this.onOpenExpert();
     }
   }
 
@@ -177,7 +201,7 @@ export class MainMenuScreen extends ex.ScreenElement {
       const tx = (w - tw) / 2;
       const ty = this.listTopY + i * MENU.LINE_STEP;
       const sel = i === this.selectedIndex;
-      const color = row.action === 'start' || row.action === 'settings'
+      const color = row.action === 'start' || row.action === 'settings' || row.action === 'expert'
         ? (sel ? '#ffffff' : '#aaccee')
         : (sel ? '#8899aa' : '#445566');
       const lw = sel ? 2.2 : 1.4;

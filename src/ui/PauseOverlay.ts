@@ -51,7 +51,8 @@ export class PauseOverlay extends ex.ScreenElement {
       this.applyAction(ROWS[this.selectedIndex].action);
     } else if (e.code === 'Escape') {
       e.preventDefault();
-      this.resume();
+      // Second Esc after opening pause: leave the run (GameplayScene handles the first Esc).
+      this.applyAction('quit');
     }
   };
 
@@ -242,7 +243,7 @@ export class PauseOverlay extends ex.ScreenElement {
       StrokeFont.draw(ctx, label, tx, ty, this.itemSize, color, sel ? 2.2 : 1.4, MENU.ITEM_COARSENESS);
     }
 
-    const hint = 'UP / DOWN   ENTER / CLICK ROW   ESC / B = RESUME   PAD A = CHOOSE';
+    const hint = 'UP / DOWN   ENTER / CLICK ROW   ESC = QUIT TO MENU   B / SELECT = RESUME';
     const hs = MENU.HINT_SIZE;
     const hx = (w - StrokeFont.measure(hint, hs)) / 2;
     const hy = this.boxY + this.boxH - 36;

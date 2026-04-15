@@ -2,9 +2,11 @@ import * as ex from 'excalibur';
 import { GameplayScene } from './scenes/GameplayScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { GAME } from './constants';
+import { initExpertSettings } from './settings/ExpertSettings';
 import { initGameSettings } from './settings/GameSettings';
 
 initGameSettings();
+initExpertSettings();
 
 const game = new ex.Engine({
   width: GAME.WIDTH,

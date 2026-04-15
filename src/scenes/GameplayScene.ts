@@ -8,6 +8,7 @@ import { GameEvents } from '../utils/GameEvents';
 import { RoomManager } from '../rooms/RoomManager';
 import { PickupActor } from '../actors/PickupActor';
 import { EXIT_ROOM_ID, MAZE, START_ROOM_ID, resetMazeGraph } from '../rooms/MazeGraph';
+import { getExpertMazeSettings } from '../settings/ExpertSettings';
 import DebugConfig from '../constants/DebugConfig';
 import type { RoomDef } from '../rooms/RoomDef';
 import type { PickupType } from '../types/GameTypes';
@@ -56,7 +57,7 @@ export class GameplayScene extends ex.Scene {
 
   private readonly onGameWonBound = (): void => {
     this.sharedState.scoreLocked = true;
-    resetMazeGraph(MAZE_GEN.SEED);
+    resetMazeGraph();
     this.roomManager.clearClearedRooms();
     // Empty exit stays "cleared" so re-entering does not fire `game:won` again until other rooms are played.
     this.roomManager.markRoomCleared(EXIT_ROOM_ID);
@@ -76,6 +77,14 @@ export class GameplayScene extends ex.Scene {
   }
 
   onInitialize(engine: ex.Engine): void {
+    // If anything queued actors before this hook, or a rare double-start slipped through, clear them.
+    for (const actor of [...this.actors]) {
+      actor.kill();
+    }
+
+    const expertMaze = getExpertMazeSettings();
+    resetMazeGraph(expertMaze.seed, expertMaze.gridW, expertMaze.gridH);
+
     this.sharedState = new SharedPlayerState();
 
     if (!isGameAudioPrepared()) {

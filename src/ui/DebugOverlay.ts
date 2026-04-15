@@ -1,5 +1,7 @@
 import * as ex from 'excalibur';
-import { GAME, ROOM, MAZE_GEN } from '../constants';
+import { GAME, ROOM } from '../constants';
+import { getActiveMazeParams } from '../rooms/MazeGraph';
+import { formatExpertSeedDisplay } from '../settings/ExpertSettings';
 import { SharedPlayerState } from '../state/SharedPlayerState';
 import { RoomManager } from '../rooms/RoomManager';
 import { StrokeFont } from './StrokeFont';
@@ -93,10 +95,11 @@ export class DebugOverlay extends ex.ScreenElement {
     // Build lines
     const s = this.state;
     const rm = this.roomManager;
+    const mazeP = getActiveMazeParams();
     const lines: string[] = [
       `FPS: ${Math.round(this.smoothFps)}`,
       `Room: ${rm.currentRoomId}  Diff: ${rm.currentDifficulty.toFixed(2)}  Live: ${rm.liveCount}`,
-      `Seed: ${MAZE_GEN.SEED}`,
+      `Maze: ${mazeP.gridW}x${mazeP.gridH}  Seed: ${formatExpertSeedDisplay(mazeP.seed)}`,
       `Upgrades: S${s.shooterType} W${s.weaponPower} SH${s.shieldLevel}(${Math.round(s.shieldCharge)}/${s.shieldMaxCharge}) P${s.panicCount}`,
       `God: ${s.godMode ? 'ON' : 'off'}`,
       `Health: ${Math.round(s.health)}/${s.maxHealth}`,

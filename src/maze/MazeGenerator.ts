@@ -17,6 +17,53 @@ function ensureMinSpawnerMachines(result: SpawnerDef[], min: number): void {
   }
 }
 
+function distinctSpawnerTypesWithMachines(result: SpawnerDef[]): Set<SpawnEnemyType> {
+  const types = new Set<SpawnEnemyType>();
+  for (const s of result) {
+    if (s.count > 0) types.add(s.type);
+  }
+  return types;
+}
+
+/**
+ * Every combat room must have at least two different enemy spawner types (easy tier could
+ * otherwise be wanderer-only after {@link ensureMinSpawnerMachines} padding).
+ */
+function ensureAtLeastTwoSpawnerTypes(
+  result: SpawnerDef[],
+  rng: SeededRandom,
+  difficulty: number,
+): void {
+  if (distinctSpawnerTypesWithMachines(result).size >= 2) return;
+
+  const present = distinctSpawnerTypesWithMachines(result);
+  const { EASY_TIER, MED_TIER } = MAZE_GEN;
+
+  let preferred: SpawnEnemyType[];
+  if (difficulty < EASY_TIER) {
+    preferred = ['worm', 'blaster', 'dart'];
+  } else if (difficulty < MED_TIER) {
+    preferred = ['dart', 'wrangler', 'satellite', 'worm'];
+  } else {
+    preferred = ['dart', 'wrangler', 'satellite', 'worm', 'blaster'];
+  }
+
+  for (const t of preferred) {
+    if (!present.has(t)) {
+      result.push({ type: t, count: 1 });
+      return;
+    }
+  }
+
+  const pool: SpawnEnemyType[] = ['wanderer', 'dart', 'worm', 'blaster', 'wrangler', 'satellite'];
+  for (const t of rng.shuffle([...pool])) {
+    if (!present.has(t)) {
+      result.push({ type: t, count: 1 });
+      return;
+    }
+  }
+}
+
 export interface MazeResult {
   rooms: Record<string, RoomDef>;
   startRoomId: string;
@@ -63,8 +110,9 @@ function bfsDistances(
 
 /**
  * Build spawner machine definitions for a room based on difficulty (0 = easy, 1 = hardest).
- * Every room gets at least {@link MAZE_GEN.MIN_SPAWNER_MACHINES_PER_ROOM} machines.
- * Blasters appear in all tiers with rising probability / guaranteed presence on harder rooms.
+ * Every room gets at least {@link MAZE_GEN.MIN_SPAWNER_MACHINES_PER_ROOM} machines and at least
+ * two distinct enemy spawner types. Blasters appear in all tiers with rising probability /
+ * guaranteed presence on harder rooms.
  */
 function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEnemyType): SpawnerDef[] {
   const { EASY_TIER, MED_TIER } = MAZE_GEN;
@@ -79,6 +127,7 @@ function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEn
       result.push({ type: 'blaster', count: 1 });
     }
     ensureMinSpawnerMachines(result, MIN_MACHINES);
+    ensureAtLeastTwoSpawnerTypes(result, rng, difficulty);
     return result;
   }
 
@@ -103,6 +152,7 @@ function buildSpawners(difficulty: number, rng: SeededRandom, bossType?: SpawnEn
   }
 
   ensureMinSpawnerMachines(result, MIN_MACHINES);
+  ensureAtLeastTwoSpawnerTypes(result, rng, difficulty);
   return result;
 }
 

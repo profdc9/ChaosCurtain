@@ -1,16 +1,16 @@
 import * as ex from 'excalibur';
 import { GAME, MENU, ROOM } from '../constants';
 import {
-  controlSchemeLabel,
-  cycleDifficulty,
-  cyclePlayerControl,
-  difficultyLabel,
-  getGameSettings,
-  togglePlayerCount,
-} from '../settings/GameSettings';
+  adjustExpertGridH,
+  adjustExpertGridW,
+  adjustExpertSeed,
+  appendExpertSeedDigit,
+  formatExpertSeedDisplay,
+  getExpertMazeSettings,
+} from '../settings/ExpertSettings';
 import { StrokeFont } from './StrokeFont';
 
-type RowKind = 'difficulty' | 'players' | 'p1' | 'p2' | 'back';
+type RowKind = 'gridW' | 'gridH' | 'seed' | 'back';
 
 interface RowDef {
   readonly kind: RowKind;
@@ -18,9 +18,9 @@ interface RowDef {
 }
 
 /**
- * Coop + difficulty + per-player control assignment (keyboard/mouse at most once).
+ * Tunable maze dimensions and PRNG seed (persisted). Intended for testing and sharing layouts.
  */
-export class SettingsScreen extends ex.ScreenElement {
+export class ExpertScreen extends ex.ScreenElement {
   private readonly engineRef: ex.Engine;
   private readonly onClose: () => void;
   private selectedIndex = 0;
@@ -72,26 +72,20 @@ export class SettingsScreen extends ex.ScreenElement {
   }
 
   private visibleRows(): RowDef[] {
-    const g = getGameSettings();
-    const rows: RowDef[] = [
-      { kind: 'difficulty', label: 'DIFFICULTY' },
-      { kind: 'players', label: 'PLAYERS' },
-      { kind: 'p1', label: 'PLAYER 1 CONTROLS' },
+    return [
+      { kind: 'gridW', label: 'MAZE WIDTH (CELLS)' },
+      { kind: 'gridH', label: 'MAZE HEIGHT (CELLS)' },
+      { kind: 'seed', label: 'RANDOM SEED (000000-999999)' },
+      { kind: 'back', label: 'BACK TO MENU' },
     ];
-    if (g.playerCount === 2) {
-      rows.push({ kind: 'p2', label: 'PLAYER 2 CONTROLS' });
-    }
-    rows.push({ kind: 'back', label: 'BACK TO MENU' });
-    return rows;
   }
 
   private valueLabel(kind: RowKind): string {
-    const g = getGameSettings();
+    const g = getExpertMazeSettings();
     switch (kind) {
-      case 'difficulty': return difficultyLabel(g.difficulty);
-      case 'players': return g.playerCount === 1 ? 'ONE' : 'TWO (COOP)';
-      case 'p1': return controlSchemeLabel(g.playerControls[0]);
-      case 'p2': return controlSchemeLabel(g.playerControls[1]);
+      case 'gridW': return String(g.gridW);
+      case 'gridH': return String(g.gridH);
+      case 'seed': return formatExpertSeedDisplay(g.seed);
       case 'back': return '';
     }
   }
@@ -120,6 +114,12 @@ export class SettingsScreen extends ex.ScreenElement {
       if (kb.wasPressed(ex.Keys.ArrowRight) || kb.wasPressed(ex.Keys.D)) {
         this.adjustRow(row.kind, 1);
       }
+      if (row.kind === 'seed') {
+        const digit = ExpertScreen.pollDigitKey(kb);
+        if (digit !== null) appendExpertSeedDigit(digit);
+        if (kb.wasPressed(ex.Keys.Z)) adjustExpertSeed(0, -1);
+        if (kb.wasPressed(ex.Keys.X)) adjustExpertSeed(0, 1);
+      }
     }
 
     this.updateHoverFromPointer(rows);
@@ -140,12 +140,27 @@ export class SettingsScreen extends ex.ScreenElement {
 
   private adjustRow(kind: RowKind, dir: -1 | 1): void {
     switch (kind) {
-      case 'difficulty': cycleDifficulty(dir); break;
-      case 'players': togglePlayerCount(); break;
-      case 'p1': cyclePlayerControl(0, dir); break;
-      case 'p2': cyclePlayerControl(1, dir); break;
+      case 'gridW': adjustExpertGridW(dir); break;
+      case 'gridH': adjustExpertGridH(dir); break;
+      case 'seed': adjustExpertSeed(dir, 0); break;
       default: break;
     }
+  }
+
+  /** Main-row `Digit0`–`Digit9` and numpad `Numpad0`–`Numpad9`, or null. */
+  private static pollDigitKey(kb: ex.Keyboard): number | null {
+    const digitKeys: readonly ex.Keys[] = [
+      ex.Keys.Digit0, ex.Keys.Digit1, ex.Keys.Digit2, ex.Keys.Digit3, ex.Keys.Digit4,
+      ex.Keys.Digit5, ex.Keys.Digit6, ex.Keys.Digit7, ex.Keys.Digit8, ex.Keys.Digit9,
+    ];
+    const numpadKeys: readonly ex.Keys[] = [
+      ex.Keys.Numpad0, ex.Keys.Numpad1, ex.Keys.Numpad2, ex.Keys.Numpad3, ex.Keys.Numpad4,
+      ex.Keys.Numpad5, ex.Keys.Numpad6, ex.Keys.Numpad7, ex.Keys.Numpad8, ex.Keys.Numpad9,
+    ];
+    for (let d = 0; d <= 9; d++) {
+      if (kb.wasPressed(digitKeys[d]) || kb.wasPressed(numpadKeys[d])) return d;
+    }
+    return null;
   }
 
   private activateRow(row: RowDef): void {
@@ -177,7 +192,7 @@ export class SettingsScreen extends ex.ScreenElement {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, w, h);
 
-    const title = 'SETTINGS';
+    const title = 'EXPERT';
     const titleX = (w - StrokeFont.measure(title, MENU.TITLE_SIZE)) / 2;
     StrokeFont.draw(
       ctx,
@@ -205,7 +220,7 @@ export class SettingsScreen extends ex.ScreenElement {
       StrokeFont.draw(ctx, line, tx, ty, this.itemSize, color, lw, this.itemCoarseness);
     }
 
-    const hint = 'LEFT / RIGHT ADJUST   ENTER BACK OR ESC';
+    const hint = '0-9 SHIFT SEED IN   ARROWS +/-1   Z / X +/-4096   ENTER BACK OR ESC';
     const hs = MENU.HINT_SIZE;
     const hx = (w - StrokeFont.measure(hint, hs)) / 2;
     const hy = this.listTopY + rows.length * this.lineStep + 28;

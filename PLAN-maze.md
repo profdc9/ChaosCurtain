@@ -6,10 +6,11 @@
 - Single entry point `(0,0)` and single exit point (farthest cell by BFS from entry)
 - Seeded PRNG (Mulberry32 in `src/utils/SeededRandom.ts`) — any seed fully reproduces the maze
 - `src/maze/MazeGenerator.ts` — recursive backtracking DFS; outputs `MazeResult` with `rooms`, `startRoomId`, `exitRoomId`
-- `src/rooms/MazeGraph.ts` — calls `generateMaze(MAZE_GEN.SEED, MAZE_GEN.GRID_W, MAZE_GEN.GRID_H)`; exports `MAZE`, `START_ROOM_ID`, `EXIT_ROOM_ID`
-- Tunable via `MAZE_GEN` constants: `GRID_W` (default 5), `GRID_H` (default 4), `SEED`
+- `src/rooms/MazeGraph.ts` — holds last-used `activeSeed`, `activeGridW`, `activeGridH` (defaults from `MAZE_GEN`); `generateMaze(seed, gridW, gridH)` fills `MAZE`, `START_ROOM_ID`, `EXIT_ROOM_ID`. `resetMazeGraph(seed?, gridW?, gridH?)` regenerates the graph; omitted args keep the current run’s values (used after a **victory loop**: `GameplayScene` calls `resetMazeGraph()` with no arguments so dimensions + seed stay the same).
+- **Runtime overrides (Expert menu)** ✓ — main menu **EXPERT** (`src/ui/ExpertScreen.ts`) edits width, height, and six-digit seed (0–999999); values persist in `localStorage` via `src/settings/ExpertSettings.ts`. `initExpertSettings()` runs at bootstrap (`src/main.ts`). Each new gameplay run applies them in `GameplayScene.onInitialize` with `resetMazeGraph(expert.seed, expert.gridW, expert.gridH)`. Clamps: grid 3–16 cells; seed modulo 1_000_000. Debug overlay shows active maze size + seed (`formatExpertSeedDisplay`).
+- Defaults / ship build still tunable via `MAZE_GEN` in `src/constants`: `GRID_W` (default 5), `GRID_H` (default 4), `SEED` (used until the player changes Expert settings; module-level `MazeGraph` still assigns once at load with `MAZE_GEN` defaults).
 - Tunable parameters (partially implemented):
-  - Grid dimensions ✓
+  - Grid dimensions ✓ (constants + Expert menu)
   - Enemy mix per room ✓ (`buildSpawners` scales with difficulty; exit room has no spawners)
   - Room merge probability — deferred (requires variable room dimensions + camera)
   - Spawner **placement** count is driven by `buildSpawners` (not a separate maze knob)

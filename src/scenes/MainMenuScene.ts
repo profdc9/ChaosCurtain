@@ -2,6 +2,7 @@ import * as ex from 'excalibur';
 import { prepareGameAudioFromUserGesture } from '../audio/prepareGameAudio';
 import { startTrackerPlaylist } from '../audio/roomTrackerMusic';
 import { ZzfxmMusicPlayer } from '../audio/ZzfxmMusicPlayer';
+import { ExpertScreen } from '../ui/ExpertScreen';
 import { MainMenuScreen } from '../ui/MainMenuScreen';
 import { SettingsScreen } from '../ui/SettingsScreen';
 import { GameplayScene } from './GameplayScene';
@@ -46,6 +47,7 @@ export class MainMenuScene extends ex.Scene {
         engine.goToScene('gameplay');
       },
       () => this.openSettings(engine),
+      () => this.openExpert(engine),
     );
   }
 
@@ -58,5 +60,16 @@ export class MainMenuScene extends ex.Scene {
       this.menu.armPointerSuppressionAfterShow();
     });
     this.add(settings);
+  }
+
+  private openExpert(engine: ex.Engine): void {
+    this.remove(this.menu);
+    const expert = new ExpertScreen(engine, () => {
+      this.remove(expert);
+      this.menu = this.createMainMenu(engine);
+      this.add(this.menu);
+      this.menu.armPointerSuppressionAfterShow();
+    });
+    this.add(expert);
   }
 }
